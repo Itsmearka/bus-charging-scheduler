@@ -27,6 +27,7 @@ Thumbs.db
 # Testing & Coverage
 .coverage
 .pytest_cache/
+tests/output/
 
 # Streamlit
 .streamlit/
