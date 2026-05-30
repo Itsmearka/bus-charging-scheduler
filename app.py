@@ -111,9 +111,12 @@ def create_custom_scenario(
         total_distance=total_distance
     )
     
-    # Create stations
+    # Create stations (exclude first and last as they are start/end cities, not charging stations)
     stations = {}
     for i, station_name in enumerate(station_names):
+        # Skip first and last stations - they are start/end cities, not charging stations
+        if i == 0 or i == len(station_names) - 1:
+            continue
         station = Station(
             station_id=station_name,
             name=station_name,
@@ -268,12 +271,36 @@ def main():
     
     # Optimization Weights
     st.sidebar.markdown("---")
+    st.sidebar.subheader("Optimization Weights")
+    individual_weight = st.sidebar.slider(
+        "Individual Weight",
+        min_value=0.0,
+        max_value=5.0,
+        value=config.get("optimization_weights", {}).get("individual", 1.0),
+        step=0.1,
+        help="Weight for minimizing wait time per bus"
+    )
+    operator_weight = st.sidebar.slider(
+        "Operator Weight",
+        min_value=0.0,
+        max_value=5.0,
+        value=config.get("optimization_weights", {}).get("operator", 1.0),
+        step=0.1,
+        help="Weight for balancing charging across operator fleets"
+    )
+    overall_weight = st.sidebar.slider(
+        "Overall Weight",
+        min_value=0.0,
+        max_value=5.0,
+        value=config.get("optimization_weights", {}).get("overall", 1.0),
+        step=0.1,
+        help="Weight for minimizing total network time"
+    )
+    
     st.sidebar.info(
-        "The scheduler uses three tunable weights to balance optimization objectives:\n\n"
         "**Individual**: Minimize wait time per bus\n"
         "**Operator**: Balance charging across operator fleets\n"
-        "**Overall**: Minimize total network time\n\n"
-        "Weights are defined in each scenario's configuration file."
+        "**Overall**: Minimize total network time"
     )
     
     st.sidebar.markdown("---")
@@ -603,11 +630,40 @@ def display_results(scenario, result):
     # Per-station view
     st.header("Per-Station Charging Queue")
     
-    tabs = st.tabs([f"Station {station.station_id}" for station in result.station_schedules])
+    # Get start and end cities from route
+    start_city = None
+    end_city = None
+    if scenario.routes:
+        # routes is a Dict[str, Route], get first route
+        first_route = next(iter(scenario.routes.values()), None)
+        if first_route and first_route.segments and len(first_route.segments) > 0:
+            start_city = first_route.segments[0].from_station
+            end_city = first_route.segments[-1].to_station
     
-    for tab, station_schedule in zip(tabs, result.station_schedules):
+    # Create list of all locations: start city, charging stations, end city
+    station_ids = []
+    if start_city:
+        station_ids.append(start_city)
+    station_ids.extend([s.station_id for s in result.station_schedules])
+    if end_city:
+        station_ids.append(end_city)
+    
+    # Remove duplicates while preserving order
+    seen = set()
+    unique_station_ids = []
+    for station_id in station_ids:
+        if station_id not in seen:
+            seen.add(station_id)
+            unique_station_ids.append(station_id)
+    
+    tabs = st.tabs([f"Station {station_id}" for station_id in unique_station_ids])
+    
+    for tab, station_id in zip(tabs, unique_station_ids):
         with tab:
-            if station_schedule.charging_queue:
+            # Find matching station schedule
+            station_schedule = next((s for s in result.station_schedules if s.station_id == station_id), None)
+            
+            if station_schedule and station_schedule.charging_queue:
                 station_data = []
                 for i, event in enumerate(station_schedule.charging_queue):
                     # Get bus information to determine source and destination
@@ -615,11 +671,11 @@ def display_results(scenario, result):
                     bus_info = next((b for b in scenario.buses if b.bus_id == bus_id), None)
                     if bus_info:
                         if bus_info.direction == "forward":
-                            source = "Bengaluru"
-                            destination = "Kochi"
+                            source = start_city
+                            destination = end_city
                         else:
-                            source = "Kochi"
-                            destination = "Bengaluru"
+                            source = end_city
+                            destination = start_city
                     else:
                         source = "Unknown"
                         destination = "Unknown"
@@ -637,7 +693,7 @@ def display_results(scenario, result):
                 station_df = pd.DataFrame(station_data)
                 st.dataframe(station_df, use_container_width=True)
             else:
-                st.info("No buses charged at this station.")
+                st.info("Not a charging station or no buses charged at this station.")
     
     st.markdown("---")
     
