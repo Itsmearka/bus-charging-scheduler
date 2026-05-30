@@ -410,4 +410,4 @@ The project follows a comprehensive testing approach with 100% code coverage:
 
 ## License
 
-This is a take-home assignment project.
+This project is licensed under the MIT License.
