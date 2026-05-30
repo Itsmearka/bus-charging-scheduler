@@ -1,0 +1,214 @@
+{
+  "metadata": {
+    "name": "Scenario 2 - Bunched Start",
+    "description": "Buses from both directions depart in a tight cluster (every 8 min) over the first 50 minutes, then space out. Creates heavy early contention.",
+    "version": "1.0"
+  },
+  "world_config": {
+    "battery_range_km": 240.0,
+    "charging_time_min": 25.0,
+    "travel_speed_kmh": 60.0,
+    "default_weights": {
+      "individual": 1.0,
+      "operator": 1.0,
+      "overall": 1.0
+    }
+  },
+  "routes": {
+    "main_route": {
+      "name": "Bengaluru to Kochi",
+      "segments": [
+        {
+          "from_station": "Bengaluru",
+          "to_station": "A",
+          "distance_km": 100.0
+        },
+        {
+          "from_station": "A",
+          "to_station": "B",
+          "distance_km": 120.0
+        },
+        {
+          "from_station": "B",
+          "to_station": "C",
+          "distance_km": 100.0
+        },
+        {
+          "from_station": "C",
+          "to_station": "D",
+          "distance_km": 120.0
+        },
+        {
+          "from_station": "D",
+          "to_station": "Kochi",
+          "distance_km": 100.0
+        }
+      ]
+    }
+  },
+  "stations": {
+    "A": {
+      "name": "Station A",
+      "num_chargers": 1
+    },
+    "B": {
+      "name": "Station B",
+      "num_chargers": 1
+    },
+    "C": {
+      "name": "Station C",
+      "num_chargers": 1
+    },
+    "D": {
+      "name": "Station D",
+      "num_chargers": 1
+    }
+  },
+  "buses": [
+    {
+      "bus_id": "bus-BK-01",
+      "operator": "kpn",
+      "route_id": "main_route",
+      "direction": "forward",
+      "departure_time": "19:00"
+    },
+    {
+      "bus_id": "bus-BK-02",
+      "operator": "freshbus",
+      "route_id": "main_route",
+      "direction": "forward",
+      "departure_time": "19:08"
+    },
+    {
+      "bus_id": "bus-BK-03",
+      "operator": "flixbus",
+      "route_id": "main_route",
+      "direction": "forward",
+      "departure_time": "19:16"
+    },
+    {
+      "bus_id": "bus-BK-04",
+      "operator": "kpn",
+      "route_id": "main_route",
+      "direction": "forward",
+      "departure_time": "19:24"
+    },
+    {
+      "bus_id": "bus-BK-05",
+      "operator": "freshbus",
+      "route_id": "main_route",
+      "direction": "forward",
+      "departure_time": "19:32"
+    },
+    {
+      "bus_id": "bus-BK-06",
+      "operator": "flixbus",
+      "route_id": "main_route",
+      "direction": "forward",
+      "departure_time": "19:40"
+    },
+    {
+      "bus_id": "bus-BK-07",
+      "operator": "kpn",
+      "route_id": "main_route",
+      "direction": "forward",
+      "departure_time": "19:48"
+    },
+    {
+      "bus_id": "bus-BK-08",
+      "operator": "freshbus",
+      "route_id": "main_route",
+      "direction": "forward",
+      "departure_time": "20:03"
+    },
+    {
+      "bus_id": "bus-BK-09",
+      "operator": "flixbus",
+      "route_id": "main_route",
+      "direction": "forward",
+      "departure_time": "20:18"
+    },
+    {
+      "bus_id": "bus-BK-10",
+      "operator": "kpn",
+      "route_id": "main_route",
+      "direction": "forward",
+      "departure_time": "20:33"
+    },
+    {
+      "bus_id": "bus-KB-01",
+      "operator": "freshbus",
+      "route_id": "main_route",
+      "direction": "reverse",
+      "departure_time": "19:00"
+    },
+    {
+      "bus_id": "bus-KB-02",
+      "operator": "flixbus",
+      "route_id": "main_route",
+      "direction": "reverse",
+      "departure_time": "19:08"
+    },
+    {
+      "bus_id": "bus-KB-03",
+      "operator": "kpn",
+      "route_id": "main_route",
+      "direction": "reverse",
+      "departure_time": "19:16"
+    },
+    {
+      "bus_id": "bus-KB-04",
+      "operator": "freshbus",
+      "route_id": "main_route",
+      "direction": "reverse",
+      "departure_time": "19:24"
+    },
+    {
+      "bus_id": "bus-KB-05",
+      "operator": "flixbus",
+      "route_id": "main_route",
+      "direction": "reverse",
+      "departure_time": "19:32"
+    },
+    {
+      "bus_id": "bus-KB-06",
+      "operator": "kpn",
+      "route_id": "main_route",
+      "direction": "reverse",
+      "departure_time": "19:40"
+    },
+    {
+      "bus_id": "bus-KB-07",
+      "operator": "freshbus",
+      "route_id": "main_route",
+      "direction": "reverse",
+      "departure_time": "19:48"
+    },
+    {
+      "bus_id": "bus-KB-08",
+      "operator": "flixbus",
+      "route_id": "main_route",
+      "direction": "reverse",
+      "departure_time": "20:03"
+    },
+    {
+      "bus_id": "bus-KB-09",
+      "operator": "kpn",
+      "route_id": "main_route",
+      "direction": "reverse",
+      "departure_time": "20:18"
+    },
+    {
+      "bus_id": "bus-KB-10",
+      "operator": "freshbus",
+      "route_id": "main_route",
+      "direction": "reverse",
+      "departure_time": "20:33"
+    }
+  ],
+  "weights": {
+    "individual": 1.0,
+    "operator": 1.0,
+    "overall": 1.0
+  }
+}
