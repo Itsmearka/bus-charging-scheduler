@@ -234,7 +234,15 @@ The following changes are supported by the current architecture. For each, the a
 
 ## How to Change a Weight
 
-### Example 1: Via Configuration File
+### Example 1: Via Streamlit UI
+Use the weight sliders in the sidebar:
+- **Individual Weight**: Controls penalty on extra charging stops (0.0 - 5.0, default 1.0)
+- **Operator Weight**: Controls operator-level queue balancing sensitivity (0.0 - 5.0, default 1.0)
+- **Overall Weight**: Controls network-wide congestion management (0.0 - 5.0, default 1.0)
+
+Changes apply immediately on the next "Run Scheduler" click.
+
+### Example 2: Via Configuration File
 ```json
 // scenarios/scenario_4_operator_heavy.json
 {
@@ -256,10 +264,26 @@ scenario.weights = {
 }
 ```
 
-### Example 3: Via Streamlit UI
-Use the weight sliders in the sidebar - changes apply immediately on next "Run Scheduler" click.
-
 **Weight Location**: Single source of truth in `scenario.weights` dict. No weights scattered in code.
+
+## Custom Route Behavior
+
+The Streamlit UI supports custom route creation with the following behavior:
+
+**Route Structure:**
+- Users add stations in order: start city, charging stations, end city
+- Distances are set between consecutive stations
+- Buses travel in both directions (forward and reverse)
+
+**Charging Station Handling:**
+- Start and end cities are **excluded** from charging stations
+- Only intermediate stations are treated as charging stations
+- This matches the pre-built scenario behavior where Bengaluru and Kochi are route endpoints, not charging stations
+
+**Route Context Display:**
+- Per-Station Charging Queue shows all route locations: start city, charging stations, end city
+- Start/end cities display "Not a charging station or no buses charged at this station"
+- This provides complete route context while correctly identifying which locations have charging infrastructure
 
 ## How to Add a New Optimization Objective
 
