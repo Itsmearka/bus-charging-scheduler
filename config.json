@@ -1,0 +1,96 @@
+{
+  "world_config": {
+    "battery_range_km": 240.0,
+    "charging_time_min": 25.0,
+    "travel_speed_kmh": 60.0
+  },
+  "route_config": {
+    "num_cities": 2,
+    "start_city": "Bengaluru",
+    "end_city": "Kochi",
+    "num_stations": 4,
+    "station_names": ["A", "B", "C", "D"],
+    "default_gap_between_stations_km": 100.0,
+    "segments": [
+      {
+        "from_station": "Bengaluru",
+        "to_station": "A",
+        "distance_km": 100.0
+      },
+      {
+        "from_station": "A",
+        "to_station": "B",
+        "distance_km": 120.0
+      },
+      {
+        "from_station": "B",
+        "to_station": "C",
+        "distance_km": 100.0
+      },
+      {
+        "from_station": "C",
+        "to_station": "D",
+        "distance_km": 120.0
+      },
+      {
+        "from_station": "D",
+        "to_station": "Kochi",
+        "distance_km": 100.0
+      }
+    ]
+  },
+  "station_config": {
+    "default_chargers_per_station": 1,
+    "stations": {
+      "A": {
+        "name": "Station A",
+        "num_chargers": 1,
+        "location": "100km from Bengaluru"
+      },
+      "B": {
+        "name": "Station B",
+        "num_chargers": 1,
+        "location": "220km from Bengaluru"
+      },
+      "C": {
+        "name": "Station C",
+        "num_chargers": 1,
+        "location": "320km from Bengaluru"
+      },
+      "D": {
+        "name": "Station D",
+        "num_chargers": 1,
+        "location": "440km from Bengaluru"
+      }
+    }
+  },
+  "bus_config": {
+    "default_passengers_per_bus": 40,
+    "default_bus_type": "standard",
+    "default_battery_capacity_km": 240.0,
+    "bus_types": {
+      "standard": {
+        "battery_capacity_km": 240.0,
+        "passenger_capacity": 40
+      },
+      "long_range": {
+        "battery_capacity_km": 300.0,
+        "passenger_capacity": 40
+      },
+      "vip": {
+        "battery_capacity_km": 240.0,
+        "passenger_capacity": 20
+      }
+    }
+  },
+  "fleet_config": {
+    "default_num_buses_per_direction": 10,
+    "default_departure_interval_min": 15,
+    "operators": ["kpn", "freshbus", "flixbus"]
+  },
+  "optimization_weights": {
+    "individual": 1.0,
+    "operator": 1.0,
+    "overall": 1.0
+  }
+}
