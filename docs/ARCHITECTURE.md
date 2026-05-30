@@ -285,6 +285,123 @@ The Streamlit UI supports custom route creation with the following behavior:
 - Start/end cities display "Not a charging station or no buses charged at this station"
 - This provides complete route context while correctly identifying which locations have charging infrastructure
 
+## Script-Based Testing Infrastructure
+
+The project includes comprehensive script-based testing infrastructure to enable automated testing without UI dependency, supporting both pytest-based tests and standalone scripts.
+
+### Test Files
+
+**Pytest-based Test Files:**
+- `test_scenario_runner.py` - Run all pre-built scenarios with weight and parameter variations
+  - Tests all 5 scenarios with default parameters
+  - Tests each scenario with weight matrix variations
+  - Tests each scenario with parameter variations
+  - Supports `--default-only` flag to test only default parameters
+
+- `test_custom_route_runner.py` - Test custom routes with various configurations
+  - Tests routes with 2-6 stations
+  - Tests different distance patterns (equal, increasing, decreasing, random)
+  - Tests different bus counts and departure intervals
+  - Tests different charger configurations
+
+- `test_parameter_variations.py` - Test parameter combinations
+  - Battery range variations (200, 240, 280 km)
+  - Charging time variations (15, 25, 35 min)
+  - Travel speed variations (40, 60, 80 km/h)
+  - Chargers per station variations (1, 2, 5)
+  - Combined parameter variations
+  - Supports `--default-params` flag to test only default parameters
+
+- `test_weight_combinations.py` - Test weight matrix combinations
+  - Individual weight matrix (5 values: 0.0, 0.5, 1.0, 2.0, 5.0)
+  - Operator weight matrix (5 values: 0.0, 0.5, 1.0, 2.0, 5.0)
+  - Overall weight matrix (5 values: 0.0, 0.5, 1.0, 2.0, 5.0)
+  - Corner cases (all zeros, all maximums)
+  - Subset testing (2×2×2 = 8 combinations)
+  - Supports `--default-only` flag to test only default weights
+
+**Standalone Scripts:**
+- `run_scenario.py` - Run specific scenarios with optional parameters
+  - Command-line arguments for scenario selection
+  - Optional weights, battery range, charging time, travel speed, chargers
+  - Output format selection (text, json, both)
+  - Example: `python tests/run_scenario.py --scenario scenario_1_even_spacing --output both`
+
+- `run_custom_route.py` - Run custom routes with optional parameters
+  - Command-line arguments for stations and distances
+  - Optional weights, battery range, charging time, travel speed, chargers, buses
+  - Output format selection (text, json, both)
+  - Example: `python tests/run_custom_route.py --stations "Bengaluru,A,Kochi" --distances "100,120" --output both`
+
+**Helper Functions (test_helpers.py):**
+- `format_output_text(result)` - Format result as text tables
+- `format_output_json(result)` - Format result as JSON
+- `save_output(result, format, filename)` - Save output to file
+- `print_output(result, format)` - Print output to terminal
+- `run_scenario_with_params(scenario_name, params)` - Run scenario with parameters
+- `create_custom_scenario(params)` - Create custom scenario for testing
+
+### Execution Commands
+
+```bash
+# Run all pre-built scenarios with default parameters
+pytest tests/test_scenario_runner.py -v
+
+# Run all pre-built scenarios with weight variations
+pytest tests/test_scenario_runner.py -v
+
+# Run custom route tests
+pytest tests/test_custom_route_runner.py -v
+
+# Run parameter variation tests
+pytest tests/test_parameter_variations.py -v
+
+# Run parameter variation tests with default parameters only
+pytest tests/test_parameter_variations.py --default-params -v
+
+# Run weight combination tests
+pytest tests/test_weight_combinations.py -v
+
+# Run weight combination tests with default weights only
+pytest tests/test_weight_combinations.py --default-only -v
+
+# Run standalone scenario script
+python tests/run_scenario.py --scenario scenario_1_even_spacing --output both
+
+# Run standalone scenario with custom weights
+python tests/run_scenario.py --scenario scenario_1_even_spacing --weights 5.0,1.0,1.0 --output json
+
+# Run standalone custom route script
+python tests/run_custom_route.py --stations "Bengaluru,A,Kochi" --distances "100,120" --output both
+
+# Run standalone custom route with custom parameters
+python tests/run_custom_route.py --stations "Bengaluru,A,Kochi" --distances "100,120" --buses 20 --chargers 2 --output json
+```
+
+### Output Format
+
+**Text Table Format:**
+- Pretty-printed tables using pandas DataFrame
+- Metrics section: Total network time, avg wait, max wait, total stops
+- Per-bus schedules: Table with columns (Bus ID, Operator, Direction, Stops, Wait Time)
+- Per-station queues: Table with columns (Station, Queue Length, Max Wait, Buses)
+
+**JSON Format:**
+- Structured JSON with sections: metadata, metrics, bus_schedules, station_schedules, weights_used
+- Timestamped filenames for reproducibility
+- Saved to `tests/output/` directory
+- Example filename: `scenario_1_default_2024-05-31_12-00-00.json`
+
+### Test Coverage
+
+The script-based testing infrastructure provides comprehensive coverage:
+- All 5 pre-built scenarios with default parameters
+- Weight matrix testing (5×5×5 = 125 combinations)
+- Parameter variations (battery, charging, speed, chargers)
+- Custom route configurations (2-6 stations, various patterns)
+- Corner cases (all zeros, all maximums, extreme combinations)
+- Output in both text and JSON formats for analysis
+
 ## How to Add a New Optimization Objective
 
 The scheduler uses weight-based decision making. To add a new optimization objective:
