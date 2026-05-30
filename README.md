@@ -16,10 +16,12 @@ The scheduler implements:
 ## Features
 
 - **Scalable Architecture**: Designed to handle growth in buses, stations, operators, and routes without code changes
-- **Configurable Weights**: Easy tuning of optimization priorities through scenario configuration files
+- **Configurable Weights**: Easy tuning of optimization priorities through scenario configuration files or UI sliders
 - **Pluggable Rules**: New scheduling rules can be added without rewriting the core engine
 - **5 Test Scenarios**: Includes scenarios for even spacing, bunched starts, asymmetric load, operator-heavy fleets, and worst-case convergence
-- **Interactive UI**: Streamlit-based interface for scenario selection and result visualization
+- **Interactive UI**: Streamlit-based interface with scenario selection, weight sliders, and result visualization
+- **Custom Route Support**: Create custom routes with configurable stations, distances, and parameters
+- **Route Context Display**: Shows start and end cities alongside charging stations for complete route visibility
 
 ## Scheduling Algorithm
 
@@ -180,12 +182,20 @@ Test files include:
 ### Via Streamlit UI
 
 1. Select a scenario from the dropdown (Pre-built or Custom Route)
-2. View scenario input data
-3. Click "Run Scheduler"
-4. View results:
+2. Adjust optimization weights using sidebar sliders (individual, operator, overall)
+3. Configure scenario parameters (battery range, charging time, travel speed, chargers per station)
+4. View scenario input data
+5. Click "Run Scheduler" to execute scheduling
+6. View results:
    - Schedule metrics
-   - Per-bus timetables
-   - Per-station charging queues
+   - Per-bus timetables with source/destination information
+   - Per-station charging queues (includes start/end cities for route context)
+
+**Custom Route Mode:**
+- Add stations in order (start city, charging stations, end city)
+- Set distances between consecutive stations
+- Configure buses per direction and departure intervals
+- Start and end cities are excluded from charging stations (they are route endpoints only)
 
 ### Via Python Code
 
@@ -258,6 +268,14 @@ scheduler = Scheduler(look_ahead_depth=None)
 - Unlimited: 20 stations × 20 buses = 400 evaluations (for 20-station route)
 
 ## Changing Weights
+
+### Via Streamlit UI
+Use the weight sliders in the sidebar:
+- **Individual Weight**: Controls penalty on extra charging stops (0.0 - 5.0, default 1.0)
+- **Operator Weight**: Controls operator-level queue balancing sensitivity (0.0 - 5.0, default 1.0)
+- **Overall Weight**: Controls network-wide congestion management (0.0 - 5.0, default 1.0)
+
+Changes apply immediately on the next "Run Scheduler" click.
 
 ### Via Configuration File
 Edit the `weights` section in the scenario JSON file:
