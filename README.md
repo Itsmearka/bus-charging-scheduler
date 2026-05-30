@@ -220,6 +220,63 @@ print(f"Total network time: {result.metrics.total_network_time}")
 print(f"Average wait per bus: {result.metrics.avg_wait_per_bus}")
 ```
 
+### Via Script-Based Testing
+
+The project includes comprehensive script-based testing infrastructure to replace UI-based testing for automated execution and result analysis.
+
+**Pytest-based Test Files:**
+- `test_scenario_runner.py` - Run all pre-built scenarios with weight and parameter variations
+- `test_custom_route_runner.py` - Test custom routes with various configurations
+- `test_parameter_variations.py` - Test parameter combinations (battery, charging, speed, chargers)
+- `test_weight_combinations.py` - Test weight matrix combinations (5×5×5 = 125 combinations)
+
+**Standalone Scripts:**
+- `run_scenario.py` - Run specific scenarios with optional parameters
+- `run_custom_route.py` - Run custom routes with optional parameters
+
+**Execution Commands:**
+
+```bash
+# Run all pre-built scenarios with default parameters
+pytest tests/test_scenario_runner.py -v
+
+# Run all pre-built scenarios with weight variations
+pytest tests/test_scenario_runner.py -v
+
+# Run custom route tests
+pytest tests/test_custom_route_runner.py -v
+
+# Run parameter variation tests
+pytest tests/test_parameter_variations.py -v
+
+# Run parameter variation tests with default parameters only
+pytest tests/test_parameter_variations.py --default-params -v
+
+# Run weight combination tests
+pytest tests/test_weight_combinations.py -v
+
+# Run weight combination tests with default weights only
+pytest tests/test_weight_combinations.py --default-only -v
+
+# Run standalone scenario script
+python tests/run_scenario.py --scenario scenario_1_even_spacing --output both
+
+# Run standalone scenario with custom weights
+python tests/run_scenario.py --scenario scenario_1_even_spacing --weights 5.0,1.0,1.0 --output json
+
+# Run standalone custom route script
+python tests/run_custom_route.py --stations "Bengaluru,A,Kochi" --distances "100,120" --output both
+
+# Run standalone custom route with custom parameters
+python tests/run_custom_route.py --stations "Bengaluru,A,Kochi" --distances "100,120" --buses 20 --chargers 2 --output json
+```
+
+**Output:**
+- Results saved to `tests/output/` directory in both text table and JSON formats
+- Text format: Pretty-printed tables with metrics, per-bus schedules, per-station queues
+- JSON format: Structured data for programmatic parsing and analysis
+- Timestamped filenames for reproducibility
+
 ## Configuring Look-Ahead Depth
 
 The scheduler uses a configurable `look_ahead_depth` parameter to control how many stations ahead to evaluate when making charging decisions.
