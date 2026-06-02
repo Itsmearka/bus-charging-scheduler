@@ -26,6 +26,21 @@ st.set_page_config(
     }
 )
 
+# Add custom CSS for progress bar shimmer effect
+st.markdown("""
+<style>
+@keyframes shimmer {
+    0% { opacity: 0.6; }
+    50% { opacity: 1; }
+    100% { opacity: 0.6; }
+}
+
+.stProgress > div > div > div {
+    animation: shimmer 2s ease-in-out infinite;
+}
+</style>
+""", unsafe_allow_html=True)
+
 
 @st.cache_data
 def get_scenarios():
@@ -95,6 +110,90 @@ def get_interesting_fact():
     return random.choice(facts)
 
 
+def show_arch_decisions_carousel():
+    """Display a carousel of architectural decisions using HTML/JavaScript to avoid Streamlit reruns."""
+    decisions = [
+        "CP-SAT constraint programming chosen for scalability with millions of variables",
+        "Streamlit caching (@st.cache_data) for scenario loading and scheduler runs",
+        "Modular architecture: loader, scheduler, utils for separation of concerns",
+        "Time limit optimization ensures guaranteed feasible solutions within 60s",
+        "Weight-based objective function balances individual vs operator vs overall optimization",
+        "Optimizations refine initial feasible solution for better quality",
+        "Scenario-based configuration allows testing different operational contexts",
+        "Dynamic bus generation enables on-demand fleet simulation"
+    ]
+    
+    # Create HTML/JavaScript carousel with beautiful styling
+    html_code = f"""
+    <div style="padding: 0.25rem; background: linear-gradient(135deg, #172d43 0%, #2a4a6f 100%); border-radius: 0.75rem; margin: 0; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2); height: 100%; box-sizing: border-box; padding-inline: 1rem;">
+        <div style="display: flex; align-items: center; justify-content: center; gap: 15px; height: 100%;">
+            <button onclick="prevDecision()" style="padding: 10px 18px; cursor: pointer; background: rgba(255, 255, 255, 0.2); color: white; border: 2px solid rgba(255, 255, 255, 0.3); border-radius: 8px; font-size: 16px; transition: all 0.3s ease; backdrop-filter: blur(10px);">←</button>
+            <div style="flex: 1; text-align: center;">
+                <div style="color: white; font-weight: 600; margin-bottom: 6px; font-size: 14px; text-transform: uppercase; letter-spacing: 1px;">Architecture Decision</div>
+                <div id="decision-display" style="color: rgba(255, 255, 255, 0.95); font-size: 14px; line-height: 1.5; min-height: 35px; display: flex; align-items: center; justify-content: center;">{decisions[0]}</div>
+                <div id="decision-counter" style="color: rgba(255, 255, 255, 0.7); font-size: 12px; margin-top: 8px; font-weight: 500;">Decision 1 of {len(decisions)}</div>
+            </div>
+            <button onclick="nextDecision()" style="padding: 10px 18px; cursor: pointer; background: rgba(255, 255, 255, 0.2); color: white; border: 2px solid rgba(255, 255, 255, 0.3); border-radius: 8px; font-size: 16px; transition: all 0.3s ease; backdrop-filter: blur(10px);">→</button>
+        </div>
+    </div>
+    <style>
+        html {{
+            background-color: #0e1117;
+            font-family: "Source Sans Pro", sans-serif;
+        }}
+        * {{
+            box-sizing: border-box;
+        }}
+        button:hover {{
+            background: rgba(255, 255, 255, 0.3) !important;
+            transform: scale(1.05);
+        }}
+        #decision-display {{
+            transition: opacity 0.3s ease;
+        }}
+    </style>
+    <script>
+        var decisions = {decisions};
+        var currentDecisionIndex = 0;
+        var autoRotateDecisionInterval = null;
+        
+        function updateDecisionDisplay() {{
+            var decisionDisplay = document.getElementById('decision-display');
+            decisionDisplay.style.opacity = '0';
+            setTimeout(function() {{
+                decisionDisplay.textContent = decisions[currentDecisionIndex];
+                decisionDisplay.style.opacity = '1';
+            }}, 150);
+            
+            document.getElementById('decision-counter').textContent = 'Decision ' + (currentDecisionIndex + 1) + ' of ' + decisions.length;
+        }}
+        
+        function nextDecision() {{
+            currentDecisionIndex = (currentDecisionIndex + 1) % decisions.length;
+            updateDecisionDisplay();
+        }}
+        
+        function prevDecision() {{
+            currentDecisionIndex = (currentDecisionIndex - 1 + decisions.length) % decisions.length;
+            updateDecisionDisplay();
+        }}
+        
+        // Start automatic rotation every 5 seconds
+        function startAutoRotateDecision() {{
+            if (autoRotateDecisionInterval) {{
+                clearInterval(autoRotateDecisionInterval);
+            }}
+            autoRotateDecisionInterval = setInterval(nextDecision, 5000);
+        }}
+        
+        // Start auto-rotation on load
+        startAutoRotateDecision();
+    </script>
+    """
+    
+    st.components.v1.html(html_code, height=100)
+
+
 def show_fact_carousel():
     """Display a carousel of interesting facts using HTML/JavaScript to avoid Streamlit reruns."""
     facts = [
@@ -111,7 +210,7 @@ def show_fact_carousel():
     
     # Create HTML/JavaScript carousel with beautiful styling
     html_code = f"""
-    <div style="padding: 0.25rem; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 0.75rem; margin: 0; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2); height: 100%; box-sizing: border-box; padding-inline: 1rem;">
+    <div style="padding: 0.25rem; background: linear-gradient(135deg, #172d43 0%, #2a4a6f 100%); border-radius: 0.75rem; margin: 0; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2); height: 100%; box-sizing: border-box; padding-inline: 1rem;">
         <div style="display: flex; align-items: center; justify-content: center; gap: 15px; height: 100%;">
             <button onclick="prevFact()" style="padding: 10px 18px; cursor: pointer; background: rgba(255, 255, 255, 0.2); color: white; border: 2px solid rgba(255, 255, 255, 0.3); border-radius: 8px; font-size: 16px; transition: all 0.3s ease; backdrop-filter: blur(10px);">←</button>
             <div style="flex: 1; text-align: center;">
@@ -125,6 +224,7 @@ def show_fact_carousel():
     <style>
         html {{
             background-color: #0e1117;
+            font-family: "Source Sans Pro", sans-serif;
         }}
         * {{
             box-sizing: border-box;
@@ -190,6 +290,12 @@ def main():
     # Show interesting fact carousel in sidebar
     show_fact_carousel()
     
+    # Show architectural decisions carousel in sidebar
+    show_arch_decisions_carousel()
+    
+    # Separator between carousels and scenario selector
+    st.sidebar.markdown("---")
+    
     # Get available scenarios
     scenario_files = get_scenarios()
     
@@ -211,6 +317,9 @@ def main():
     
     selected_scenario_file = scenario_files[selected_scenario_index]
     
+    # Separator between scenario selector and optimizations
+    st.sidebar.markdown("---")
+    
     # Optimizations toggle
     enable_optimizations = st.sidebar.checkbox(
         "Enable Optimizations",
@@ -218,8 +327,17 @@ def main():
         help="Enable time-window decomposition and station filtering for larger scenarios"
     )
     
-    # Dynamic Bus Configuration Section
+    # Remove time limit toggle
+    unlimited_time = st.sidebar.checkbox(
+        "Remove Time Limit (Run Until Optimal)",
+        value=False,
+        help="Disable solver time limit to find guaranteed optimal solution (may take very long)"
+    )
+    
+    # Separator between optimizations and dynamic bus configuration
     st.sidebar.markdown("---")
+    
+    # Dynamic Bus Configuration Section
     st.sidebar.subheader("Dynamic Bus Configuration")
     
     use_dynamic = st.sidebar.checkbox("Use Dynamic Bus Generation", value=False)
@@ -288,12 +406,18 @@ def main():
         # Load selected scenario
         scenario = load_scenario_cached(selected_scenario_file)
     
+    # Separator between dynamic bus configuration and scenario details
+    st.sidebar.markdown("---")
+    
     # Display scenario metadata (only if not dynamic)
     if not use_dynamic:
         st.sidebar.subheader("Scenario Details")
         st.sidebar.write(f"**Name:** {scenario.name}")
         st.sidebar.write(f"**Buses:** {len(scenario.buses)}")
         st.sidebar.write(f"**Description:** {scenario.description}")
+    
+    # Separator before weight tuning
+    st.sidebar.markdown("---")
     
     # Weight tuning
     st.sidebar.subheader("Optimization Weights")
@@ -331,13 +455,6 @@ def main():
             help="Minimize total system time"
         )
     
-    # Remove time limit toggle
-    unlimited_time = st.sidebar.checkbox(
-        "Remove Time Limit (Run Until Optimal)",
-        value=False,
-        help="Disable solver time limit to find guaranteed optimal solution (may take very long)"
-    )
-    
     # Combine weights into dictionary for scheduler
     weights = {
         'individual': individual_weight,
@@ -357,6 +474,9 @@ def main():
     
     # Run scheduler with progress indicators
     try:
+        # Set solver running state
+        st.session_state['solver_running'] = True
+        
         # Check if we have cached results for this configuration
         if 'solver_cache' in st.session_state and cache_key in st.session_state['solver_cache']:
             result = st.session_state['solver_cache'][cache_key]['result']
@@ -416,6 +536,9 @@ def main():
                 'scenario': scenario
             }
         
+        # Set solver running state to False
+        st.session_state['solver_running'] = False
+        
         # Display solve status
         if result.solver_status == "OPTIMAL":
             st.success(f"Solver found OPTIMAL solution in {result.solve_time_seconds:.2f} seconds")
@@ -426,209 +549,212 @@ def main():
         
         # Display optimization status
         if enable_optimizations:
-            st.info("Phase 2 optimizations enabled")
+            st.info("Optimizations enabled")
     
     except Exception as e:
+        st.session_state['solver_running'] = False
         st.error(f"Error running scheduler: {e}")
         st.stop()
     
-    # Create tabs for different views
-    tab1, tab2, tab3, tab4 = st.tabs(["Scenario Input", "Bus Timetables", "Station Queues", "Metrics"])
-    
-    # Tab 1: Scenario Input
-    with tab1:
-        st.header("Scenario Input Data")
+    # Only show tabs if solver is not running
+    if not st.session_state.get('solver_running', False):
+        # Create tabs for different views
+        tab1, tab2, tab3, tab4 = st.tabs(["Scenario Input", "Bus Timetables", "Station Queues", "Metrics"])
         
-        # Display weights
-        st.subheader("Optimization Weights")
-        col1, col2, col3 = st.columns(3)
-        col1.metric("Individual", individual_weight)
-        col2.metric("Operator", operator_weight)
-        col3.metric("Overall", overall_weight)
-        
-        # Display bus schedule
-        st.subheader("Bus Schedule")
-        buses_data = []
-        for bus in scenario.buses:
-            buses_data.append({
-                "Bus ID": bus.id,
-                "Operator": bus.operator,
-                "Direction": "BK" if bus.direction == "BK" else "KB",
-                "Departure Time": minutes_to_time(bus.departure_time_minutes)
-            })
-        
-        df_buses = pd.DataFrame(buses_data)
-        st.dataframe(df_buses, use_container_width=True)
-        
-        # Display route information
-        st.subheader("Route Information")
-        config = get_scenario_config(scenario)
-        
-        col1, col2 = st.columns(2)
-        with col1:
-            st.write("**Route:** Bengaluru → A → B → C → D → Kochi")
-            st.write(f"**Total Distance:** {config['total_route_distance_km']} km")
-            st.write(f"**Battery Range:** {config['battery_range_km']} km")
-            st.write(f"**Charging Time:** {config['charging_time_minutes']} minutes")
-        
-        with col2:
-            st.write("**Stations:**")
-            for station in config['stations']:
-                location = config['station_locations_km'][station]
-                chargers = config['chargers_per_station'][station]
-                st.write(f"  - {station}: {location} km from Bengaluru ({chargers} charger)")
-        
-        # Display route segments with distances
-        st.subheader("Route Segments")
-        segments = [
-            ("Bengaluru", "A", 100),
-            ("A", "B", 120),
-            ("B", "C", 100),
-            ("C", "D", 120),
-            ("D", "Kochi", 100)
-        ]
-        
-        for from_loc, to_loc, distance in segments:
-            st.write(f"  - {from_loc} → {to_loc}: {distance} km")
-    
-    # Tab 2: Bus Timetables
-    with tab2:
-        st.header("Bus Timetables")
-        st.write("Charging plans for each bus")
-        
-        # Create data for all buses
-        timetable_data = []
-        for plan in result.plans:
-            for event in plan.events:
-                timetable_data.append({
-                    "Bus ID": plan.bus_id,
-                    "Station": event.station_id,
-                    "Arrival": minutes_to_time(event.arrival_time_minutes),
-                    "Start": minutes_to_time(event.start_time_minutes),
-                    "End": minutes_to_time(event.end_time_minutes),
-                    "Wait (min)": event.wait_time_minutes
+        # Tab 1: Scenario Input
+        with tab1:
+            st.header("Scenario Input Data")
+            
+            # Display weights
+            st.subheader("Optimization Weights")
+            col1, col2, col3 = st.columns(3)
+            col1.metric("Individual", individual_weight)
+            col2.metric("Operator", operator_weight)
+            col3.metric("Overall", overall_weight)
+            
+            # Display bus schedule
+            st.subheader("Bus Schedule")
+            buses_data = []
+            for bus in scenario.buses:
+                buses_data.append({
+                    "Bus ID": bus.id,
+                    "Operator": bus.operator,
+                    "Direction": "BK" if bus.direction == "BK" else "KB",
+                    "Departure Time": minutes_to_time(bus.departure_time_minutes)
                 })
-        
-        if timetable_data:
-            df_timetable = pd.DataFrame(timetable_data)
-            st.dataframe(df_timetable, use_container_width=True)
-        else:
-            st.info("No charging events in this scenario")
-        
-        # Display summary by bus
-        st.subheader("Summary by Bus")
-        summary_data = []
-        for plan in result.plans:
-            summary_data.append({
-                "Bus ID": plan.bus_id,
-                "Departure": minutes_to_time(plan.departure_time_minutes),
-                "Arrival": minutes_to_time(plan.arrival_time_minutes),
-                "Total Wait (min)": plan.total_wait_time_minutes,
-                "Trip Time (min)": plan.arrival_time_minutes - plan.departure_time_minutes,
-                "Charging Stops": len(plan.events)
-            })
-        
-        df_summary = pd.DataFrame(summary_data)
-        st.dataframe(df_summary, use_container_width=True)
-    
-    # Tab 3: Station Queues
-    with tab3:
-        st.header("Station Queues")
-        st.write("Charging order at each station")
-        
-        stations = ['A', 'B', 'C', 'D']
-        
-        for station in stations:
-            st.subheader(f"Station {station}")
             
-            # Collect all charging events at this station
-            events_at_station = []
+            df_buses = pd.DataFrame(buses_data)
+            st.dataframe(df_buses, use_container_width=True)
+            
+            # Display route information
+            st.subheader("Route Information")
+            config = get_scenario_config(scenario)
+            
+            col1, col2 = st.columns(2)
+            with col1:
+                st.write("**Route:** Bengaluru → A → B → C → D → Kochi")
+                st.write(f"**Total Distance:** {config['total_route_distance_km']} km")
+                st.write(f"**Battery Range:** {config['battery_range_km']} km")
+                st.write(f"**Charging Time:** {config['charging_time_minutes']} minutes")
+            
+            with col2:
+                st.write("**Stations:**")
+                for station in config['stations']:
+                    location = config['station_locations_km'][station]
+                    chargers = config['chargers_per_station'][station]
+                    st.write(f"  - {station}: {location} km from Bengaluru ({chargers} charger)")
+            
+            # Display route segments with distances
+            st.subheader("Route Segments")
+            segments = [
+                ("Bengaluru", "A", 100),
+                ("A", "B", 120),
+                ("B", "C", 100),
+                ("C", "D", 120),
+                ("D", "Kochi", 100)
+            ]
+            
+            for from_loc, to_loc, distance in segments:
+                st.write(f"  - {from_loc} → {to_loc}: {distance} km")
+        
+        # Tab 2: Bus Timetables
+        with tab2:
+            st.header("Bus Timetables")
+            st.write("Charging plans for each bus")
+            
+            # Create data for all buses
+            timetable_data = []
             for plan in result.plans:
                 for event in plan.events:
-                    if event.station_id == station:
-                        events_at_station.append({
-                            "Bus ID": event.bus_id,
-                            "Arrival": minutes_to_time(event.arrival_time_minutes),
-                            "Start": minutes_to_time(event.start_time_minutes),
-                            "End": minutes_to_time(event.end_time_minutes),
-                            "Wait (min)": event.wait_time_minutes
-                        })
+                    timetable_data.append({
+                        "Bus ID": plan.bus_id,
+                        "Station": event.station_id,
+                        "Arrival": minutes_to_time(event.arrival_time_minutes),
+                        "Start": minutes_to_time(event.start_time_minutes),
+                        "End": minutes_to_time(event.end_time_minutes),
+                        "Wait (min)": event.wait_time_minutes
+                    })
             
-            # Sort by start time
-            events_at_station.sort(key=lambda x: x['Start'])
-            
-            if events_at_station:
-                df_station = pd.DataFrame(events_at_station)
-                st.dataframe(df_station, use_container_width=True)
+            if timetable_data:
+                df_timetable = pd.DataFrame(timetable_data)
+                st.dataframe(df_timetable, use_container_width=True)
             else:
-                st.info(f"No charging events at Station {station}")
-    
-    # Tab 4: Metrics
-    with tab4:
-        st.header("Metrics Summary")
-        
-        # Overall metrics
-        st.subheader("Overall System Metrics")
-        col1, col2, col3, col4 = st.columns(4)
-        col1.metric("Total Wait Time", f"{result.total_wait_time_minutes} min")
-        col2.metric("Average Wait", f"{result.average_wait_time_minutes:.2f} min")
-        col3.metric("Max Wait", f"{result.max_wait_time_minutes} min")
-        col4.metric("Solve Time", f"{result.solve_time_seconds:.2f} s")
-        
-        # Operator-level metrics
-        st.subheader("Operator Metrics")
-        operators = {}
-        for plan in result.plans:
-            bus = next(b for b in scenario.buses if b.id == plan.bus_id)
-            operator = bus.operator
+                st.info("No charging events in this scenario")
             
-            if operator not in operators:
-                operators[operator] = []
-            operators[operator].append(plan)
-        
-        operator_data = []
-        for operator, plans in operators.items():
-            total_wait = sum(p.total_wait_time_minutes for p in plans)
-            avg_wait = total_wait / len(plans)
-            max_wait = max(p.total_wait_time_minutes for p in plans)
-            
-            operator_data.append({
-                "Operator": operator,
-                "Buses": len(plans),
-                "Total Wait (min)": total_wait,
-                "Average Wait (min)": f"{avg_wait:.2f}",
-                "Max Wait (min)": max_wait
-            })
-        
-        df_operators = pd.DataFrame(operator_data)
-        st.dataframe(df_operators, use_container_width=True)
-        
-        # Station utilization
-        st.subheader("Station Utilization")
-        config = get_scenario_config(scenario)
-        
-        utilization_data = []
-        for station in stations:
-            # Count charging events at this station
-            event_count = 0
-            total_charging_time = 0
-            
+            # Display summary by bus
+            st.subheader("Summary by Bus")
+            summary_data = []
             for plan in result.plans:
-                for event in plan.events:
-                    if event.station_id == station:
-                        event_count += 1
-                        total_charging_time += (event.end_time_minutes - event.start_time_minutes)
+                summary_data.append({
+                    "Bus ID": plan.bus_id,
+                    "Departure": minutes_to_time(plan.departure_time_minutes),
+                    "Arrival": minutes_to_time(plan.arrival_time_minutes),
+                    "Total Wait (min)": plan.total_wait_time_minutes,
+                    "Trip Time (min)": plan.arrival_time_minutes - plan.departure_time_minutes,
+                    "Charging Stops": len(plan.events)
+                })
             
-            chargers = config['chargers_per_station'][station]
-            utilization_data.append({
-                "Station": station,
-                "Chargers": chargers,
-                "Charging Events": event_count,
-                "Total Charging Time (min)": total_charging_time
-            })
+            df_summary = pd.DataFrame(summary_data)
+            st.dataframe(df_summary, use_container_width=True)
         
-        df_utilization = pd.DataFrame(utilization_data)
-        st.dataframe(df_utilization, use_container_width=True)
+        # Tab 3: Station Queues
+        with tab3:
+            st.header("Station Queues")
+            st.write("Charging order at each station")
+            
+            stations = ['A', 'B', 'C', 'D']
+            
+            for station in stations:
+                st.subheader(f"Station {station}")
+                
+                # Collect all charging events at this station
+                events_at_station = []
+                for plan in result.plans:
+                    for event in plan.events:
+                        if event.station_id == station:
+                            events_at_station.append({
+                                "Bus ID": event.bus_id,
+                                "Arrival": minutes_to_time(event.arrival_time_minutes),
+                                "Start": minutes_to_time(event.start_time_minutes),
+                                "End": minutes_to_time(event.end_time_minutes),
+                                "Wait (min)": event.wait_time_minutes
+                            })
+                
+                # Sort by start time
+                events_at_station.sort(key=lambda x: x['Start'])
+                
+                if events_at_station:
+                    df_station = pd.DataFrame(events_at_station)
+                    st.dataframe(df_station, use_container_width=True)
+                else:
+                    st.info(f"No charging events at Station {station}")
+        
+        # Tab 4: Metrics
+        with tab4:
+            st.header("Metrics Summary")
+            
+            # Overall metrics
+            st.subheader("Overall System Metrics")
+            col1, col2, col3, col4 = st.columns(4)
+            col1.metric("Total Wait Time", f"{result.total_wait_time_minutes} min")
+            col2.metric("Average Wait", f"{result.average_wait_time_minutes:.2f} min")
+            col3.metric("Max Wait", f"{result.max_wait_time_minutes} min")
+            col4.metric("Solve Time", f"{result.solve_time_seconds:.2f} s")
+            
+            # Operator-level metrics
+            st.subheader("Operator Metrics")
+            operators = {}
+            for plan in result.plans:
+                bus = next(b for b in scenario.buses if b.id == plan.bus_id)
+                operator = bus.operator
+                
+                if operator not in operators:
+                    operators[operator] = []
+                operators[operator].append(plan)
+            
+            operator_data = []
+            for operator, plans in operators.items():
+                total_wait = sum(p.total_wait_time_minutes for p in plans)
+                avg_wait = total_wait / len(plans)
+                max_wait = max(p.total_wait_time_minutes for p in plans)
+                
+                operator_data.append({
+                    "Operator": operator,
+                    "Buses": len(plans),
+                    "Total Wait (min)": total_wait,
+                    "Average Wait (min)": f"{avg_wait:.2f}",
+                    "Max Wait (min)": max_wait
+                })
+            
+            df_operators = pd.DataFrame(operator_data)
+            st.dataframe(df_operators, use_container_width=True)
+            
+            # Station utilization
+            st.subheader("Station Utilization")
+            config = get_scenario_config(scenario)
+            
+            utilization_data = []
+            for station in stations:
+                # Count charging events at this station
+                event_count = 0
+                total_charging_time = 0
+                
+                for plan in result.plans:
+                    for event in plan.events:
+                        if event.station_id == station:
+                            event_count += 1
+                            total_charging_time += (event.end_time_minutes - event.start_time_minutes)
+                
+                chargers = config['chargers_per_station'][station]
+                utilization_data.append({
+                    "Station": station,
+                    "Chargers": chargers,
+                    "Charging Events": event_count,
+                    "Total Charging Time (min)": total_charging_time
+                })
+            
+            df_utilization = pd.DataFrame(utilization_data)
+            st.dataframe(df_utilization, use_container_width=True)
 
 
 if __name__ == "__main__":
