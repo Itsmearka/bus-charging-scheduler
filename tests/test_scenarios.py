@@ -115,7 +115,6 @@ def test_all_buses_have_plans():
 
 @pytest.mark.integration
 def test_solvers_with_optimizations():
-    """Test that scheduler works with Phase 2 optimizations enabled."""
     scenario = load_scenario("data/scenarios/scenario_1_even_spacing.json")
     scheduler = BusChargingScheduler(scenario, enable_optimizations=True)
     
