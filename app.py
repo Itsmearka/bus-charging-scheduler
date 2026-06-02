@@ -6,6 +6,8 @@ Interactive web application for visualizing and tuning charging schedules.
 import streamlit as st
 import pandas as pd
 from datetime import datetime
+import random
+import time
 from src.loader import load_scenario, list_available_scenarios, get_scenario_config
 from src.scheduler import BusChargingScheduler
 from src.utils import minutes_to_time, generate_dynamic_buses
@@ -66,6 +68,43 @@ def run_scheduler_uncached(scenario, weights, enable_optimizations, unlimited_ti
     result = scheduler.solve()
     
     return result, scenario
+
+
+def show_loading_animation():
+    """Display a visual loading animation."""
+    animation = st.empty()
+    for i in range(3):
+        animation.markdown("Loading" + "." * (i + 1))
+        time.sleep(0.3)
+    animation.empty()
+
+
+def get_interesting_fact():
+    """Return a random interesting fact about electric buses or CP-SAT."""
+    facts = [
+        "CP-SAT can handle millions of variables and constraints efficiently",
+        "Electric buses can save up to 70% on fuel costs compared to diesel",
+        "Fast charging takes 25 minutes for full charge in this system",
+        "This scheduler uses Google's OR-Tools CP-SAT library",
+        "Electric buses have zero tailpipe emissions",
+        "CP-SAT is used by major companies for logistics optimization",
+        "Battery range is 240km for buses in this system",
+        "The solver uses constraint programming to find optimal schedules",
+        "Electric buses are quieter than traditional diesel buses"
+    ]
+    return random.choice(facts)
+
+
+def show_rotating_facts(duration_seconds=15):
+    """Display rotating facts for a specified duration."""
+    fact_display = st.empty()
+    start_time = time.time()
+    
+    while time.time() - start_time < duration_seconds:
+        fact_display.info(f"Did you know? {get_interesting_fact()}")
+        time.sleep(3)  # Rotate every 3 seconds
+    
+    fact_display.empty()
 
 
 def main():
@@ -231,12 +270,62 @@ def main():
         'overall': overall_weight
     }
     
-    # Run scheduler
+    # Show interesting fact
+    st.info(f"Did you know? {get_interesting_fact()}")
+    
+    # Display estimated solve time
+    import config
+    if unlimited_time:
+        st.info("Running with unlimited time - may take significantly longer for optimal solution")
+    else:
+        st.info("Guaranteed feasible solution within time limit. Enable unlimited time for optimal solution on larger datasets.")
+    
+    # Run scheduler with progress indicators
     try:
-        if use_dynamic:
-            result, scenario = run_scheduler_uncached(scenario, weights, enable_optimizations, unlimited_time)
-        else:
-            result, scenario = run_scheduler(selected_scenario_file, weights, enable_optimizations, unlimited_time)
+        # Show configuration summary at the top
+        with st.expander("Configuration Details", expanded=False):
+            col1, col2, col3 = st.columns(3)
+            col1.metric("Buses", len(scenario.buses))
+            col2.metric("Stations", len(config.STATIONS))
+            col3.metric("Optimizations", "Enabled" if enable_optimizations else "Disabled")
+            
+            st.markdown(f"""
+            **Weights:**
+            - Individual: {weights['individual']}
+            - Operator: {weights['operator']}
+            - Overall: {weights['overall']}
+            
+            **Time Limit:** {config.SOLVER_TIME_LIMIT_SECONDS}s
+            """)
+        
+        progress_bar = st.progress(0)
+        status_text = st.empty()
+        
+        # Show loading animation
+        show_loading_animation()
+        
+        status_text.text("Initializing solver...")
+        progress_bar.progress(10)
+        
+        status_text.text("Building constraints and variables...")
+        progress_bar.progress(30)
+        
+        status_text.text("Solving optimization problem using CP-SAT...")
+        progress_bar.progress(50)
+        
+        # Run solver with spinner
+        with st.spinner("Solving scheduling problem using CP-SAT solver..."):
+            if use_dynamic:
+                result, scenario = run_scheduler_uncached(scenario, weights, enable_optimizations, unlimited_time)
+            else:
+                result, scenario = run_scheduler(selected_scenario_file, weights, enable_optimizations, unlimited_time)
+        
+        progress_bar.progress(100)
+        status_text.text("Solution found!")
+        
+        # Clear progress indicators
+        progress_bar.empty()
+        status_text.empty()
         
         # Display solve status
         if result.solver_status == "OPTIMAL":
