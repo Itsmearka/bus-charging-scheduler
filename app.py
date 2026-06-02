@@ -95,16 +95,88 @@ def get_interesting_fact():
     return random.choice(facts)
 
 
-def show_rotating_facts(duration_seconds=15):
-    """Display rotating facts for a specified duration."""
-    fact_display = st.empty()
-    start_time = time.time()
+def show_fact_carousel():
+    """Display a carousel of interesting facts using HTML/JavaScript to avoid Streamlit reruns."""
+    facts = [
+        "CP-SAT can handle millions of variables and constraints efficiently",
+        "Electric buses can save up to 70% on fuel costs compared to diesel",
+        "Fast charging takes 25 minutes for full charge in this system",
+        "This scheduler uses Google's OR-Tools CP-SAT library",
+        "Electric buses have zero tailpipe emissions",
+        "CP-SAT is used by major companies for logistics optimization",
+        "Battery range is 240km for buses in this system",
+        "The solver uses constraint programming to find optimal schedules",
+        "Electric buses are quieter than traditional diesel buses"
+    ]
     
-    while time.time() - start_time < duration_seconds:
-        fact_display.info(f"Did you know? {get_interesting_fact()}")
-        time.sleep(3)  # Rotate every 3 seconds
+    # Create HTML/JavaScript carousel with beautiful styling
+    html_code = f"""
+    <div style="padding: 0.25rem; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 0.75rem; margin: 0; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2); height: 100%; box-sizing: border-box; padding-inline: 1rem;">
+        <div style="display: flex; align-items: center; justify-content: center; gap: 15px; height: 100%;">
+            <button onclick="prevFact()" style="padding: 10px 18px; cursor: pointer; background: rgba(255, 255, 255, 0.2); color: white; border: 2px solid rgba(255, 255, 255, 0.3); border-radius: 8px; font-size: 16px; transition: all 0.3s ease; backdrop-filter: blur(10px);">←</button>
+            <div style="flex: 1; text-align: center;">
+                <div style="color: white; font-weight: 600; margin-bottom: 6px; font-size: 14px; text-transform: uppercase; letter-spacing: 1px;">Did you know?</div>
+                <div id="fact-display" style="color: rgba(255, 255, 255, 0.95); font-size: 14px; line-height: 1.5; min-height: 35px; display: flex; align-items: center; justify-content: center;">{facts[0]}</div>
+                <div id="fact-counter" style="color: rgba(255, 255, 255, 0.7); font-size: 12px; margin-top: 8px; font-weight: 500;">Fact 1 of {len(facts)}</div>
+            </div>
+            <button onclick="nextFact()" style="padding: 10px 18px; cursor: pointer; background: rgba(255, 255, 255, 0.2); color: white; border: 2px solid rgba(255, 255, 255, 0.3); border-radius: 8px; font-size: 16px; transition: all 0.3s ease; backdrop-filter: blur(10px);">→</button>
+        </div>
+    </div>
+    <style>
+        html {{
+            background-color: #0e1117;
+        }}
+        * {{
+            box-sizing: border-box;
+        }}
+        button:hover {{
+            background: rgba(255, 255, 255, 0.3) !important;
+            transform: scale(1.05);
+        }}
+        #fact-display {{
+            transition: opacity 0.3s ease;
+        }}
+    </style>
+    <script>
+        var facts = {facts};
+        var currentIndex = 0;
+        var autoRotateInterval = null;
+        
+        function updateDisplay() {{
+            var factDisplay = document.getElementById('fact-display');
+            factDisplay.style.opacity = '0';
+            setTimeout(function() {{
+                factDisplay.textContent = facts[currentIndex];
+                factDisplay.style.opacity = '1';
+            }}, 150);
+            
+            document.getElementById('fact-counter').textContent = 'Fact ' + (currentIndex + 1) + ' of ' + facts.length;
+        }}
+        
+        function nextFact() {{
+            currentIndex = (currentIndex + 1) % facts.length;
+            updateDisplay();
+        }}
+        
+        function prevFact() {{
+            currentIndex = (currentIndex - 1 + facts.length) % facts.length;
+            updateDisplay();
+        }}
+        
+        // Start automatic rotation every 5 seconds
+        function startAutoRotate() {{
+            if (autoRotateInterval) {{
+                clearInterval(autoRotateInterval);
+            }}
+            autoRotateInterval = setInterval(nextFact, 5000);
+        }}
+        
+        // Start auto-rotation on load
+        startAutoRotate();
+    </script>
+    """
     
-    fact_display.empty()
+    st.components.v1.html(html_code, height=100)
 
 
 def main():
@@ -114,6 +186,9 @@ def main():
     
     # Sidebar: Scenario selector
     st.sidebar.header("Configuration")
+    
+    # Show interesting fact carousel in sidebar
+    show_fact_carousel()
     
     # Get available scenarios
     scenario_files = get_scenarios()
@@ -270,8 +345,8 @@ def main():
         'overall': overall_weight
     }
     
-    # Show interesting fact
-    st.info(f"Did you know? {get_interesting_fact()}")
+    # Create cache key for current configuration
+    cache_key = f"{selected_scenario_file}_{weights['individual']}_{weights['operator']}_{weights['overall']}_{enable_optimizations}_{unlimited_time}"
     
     # Display estimated solve time
     import config
@@ -282,50 +357,64 @@ def main():
     
     # Run scheduler with progress indicators
     try:
-        # Show configuration summary at the top
-        with st.expander("Configuration Details", expanded=False):
-            col1, col2, col3 = st.columns(3)
-            col1.metric("Buses", len(scenario.buses))
-            col2.metric("Stations", len(config.STATIONS))
-            col3.metric("Optimizations", "Enabled" if enable_optimizations else "Disabled")
+        # Check if we have cached results for this configuration
+        if 'solver_cache' in st.session_state and cache_key in st.session_state['solver_cache']:
+            result = st.session_state['solver_cache'][cache_key]['result']
+            scenario = st.session_state['solver_cache'][cache_key]['scenario']
+            st.success("Using cached solution from previous run")
+        else:
+            # Show configuration summary at the top
+            with st.expander("Configuration Details", expanded=False):
+                col1, col2, col3 = st.columns(3)
+                col1.metric("Buses", len(scenario.buses))
+                col2.metric("Stations", len(config.STATIONS))
+                col3.metric("Optimizations", "Enabled" if enable_optimizations else "Disabled")
+                
+                st.markdown(f"""
+                **Weights:**
+                - Individual: {weights['individual']}
+                - Operator: {weights['operator']}
+                - Overall: {weights['overall']}
+                
+                **Time Limit:** {config.SOLVER_TIME_LIMIT_SECONDS}s
+                """)
             
-            st.markdown(f"""
-            **Weights:**
-            - Individual: {weights['individual']}
-            - Operator: {weights['operator']}
-            - Overall: {weights['overall']}
+            progress_bar = st.progress(0)
+            status_text = st.empty()
             
-            **Time Limit:** {config.SOLVER_TIME_LIMIT_SECONDS}s
-            """)
-        
-        progress_bar = st.progress(0)
-        status_text = st.empty()
-        
-        # Show loading animation
-        show_loading_animation()
-        
-        status_text.text("Initializing solver...")
-        progress_bar.progress(10)
-        
-        status_text.text("Building constraints and variables...")
-        progress_bar.progress(30)
-        
-        status_text.text("Solving optimization problem using CP-SAT...")
-        progress_bar.progress(50)
-        
-        # Run solver with spinner
-        with st.spinner("Solving scheduling problem using CP-SAT solver..."):
-            if use_dynamic:
-                result, scenario = run_scheduler_uncached(scenario, weights, enable_optimizations, unlimited_time)
-            else:
-                result, scenario = run_scheduler(selected_scenario_file, weights, enable_optimizations, unlimited_time)
-        
-        progress_bar.progress(100)
-        status_text.text("Solution found!")
-        
-        # Clear progress indicators
-        progress_bar.empty()
-        status_text.empty()
+            # Show loading animation
+            show_loading_animation()
+            
+            status_text.text("Initializing solver...")
+            progress_bar.progress(10)
+            
+            status_text.text("Building constraints and variables...")
+            progress_bar.progress(30)
+            
+            status_text.text("Solving optimization problem using CP-SAT...")
+            progress_bar.progress(50)
+            
+            # Run solver with spinner
+            with st.spinner("Solving scheduling problem using CP-SAT solver..."):
+                if use_dynamic:
+                    result, scenario = run_scheduler_uncached(scenario, weights, enable_optimizations, unlimited_time)
+                else:
+                    result, scenario = run_scheduler(selected_scenario_file, weights, enable_optimizations, unlimited_time)
+            
+            progress_bar.progress(100)
+            status_text.text("Solution found!")
+            
+            # Clear progress indicators
+            progress_bar.empty()
+            status_text.empty()
+            
+            # Cache the results
+            if 'solver_cache' not in st.session_state:
+                st.session_state['solver_cache'] = {}
+            st.session_state['solver_cache'][cache_key] = {
+                'result': result,
+                'scenario': scenario
+            }
         
         # Display solve status
         if result.solver_status == "OPTIMAL":
