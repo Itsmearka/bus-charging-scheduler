@@ -9,6 +9,8 @@ This project implements a constraint programming solution for optimizing electri
 - Operator fleet delays (operator-level fairness)
 - Total system time (overall efficiency)
 
+**Deployed Application**: https://itsmearka-bus-charging-scheduler.streamlit.app/
+
 ## Features
 
 - **CP-SAT Optimization**: Uses Google OR-Tools CP-SAT solver for optimal scheduling
@@ -25,7 +27,7 @@ This project implements a constraint programming solution for optimizing electri
 ```
 bus_charging_scheduler/
 ├── config.py                          # Global constants (SINGLE SOURCE OF TRUTH)
-├── app.py                             # Streamlit UI application
+├── app.py                             # Streamlit UI application (orchestrates UI components)
 ├── data/
 │   ├── scenarios/
 │   │   ├── scenario_1_even_spacing.json
@@ -35,11 +37,28 @@ bus_charging_scheduler/
 │   │   └── scenario_5_worst_case.json
 ├── src/
 │   ├── models.py                      # Pydantic data models
-│   ├── scheduler.py                   # CP-SAT scheduling engine
-│   ├── constraints.py                 # Hard and soft constraints
+│   ├── scheduler.py                   # CP-SAT scheduling engine (main orchestrator)
+│   ├── scheduler_variables.py        # Variable management for CP-SAT
+│   ├── scheduler_solution.py          # Solution extraction from solver
+│   ├── constraints/                   # Constraint definitions (modular package)
+│   │   ├── __init__.py
+│   │   ├── range.py                   # Battery range constraints
+│   │   ├── capacity.py                # Charger capacity constraints
+│   │   ├── route.py                   # Route order constraints
+│   │   └── timing.py                  # Timing constraints (duration, travel, arrival)
 │   ├── objectives.py                  # Objective functions
 │   ├── loader.py                      # Scenario loading
-│   └── utils.py                       # Helper functions
+│   └── utils/                         # Helper functions (modular package)
+│       ├── __init__.py
+│       ├── route.py                   # Route and distance calculations
+│       ├── time.py                    # Time conversion and travel time
+│       └── bus_generation.py          # Dynamic bus generation
+├── ui/                                # UI components (modular package)
+│   ├── __init__.py
+│   ├── styles.py                      # Custom CSS styling
+│   ├── carousels.py                   # Fact and architectural decision carousels
+│   ├── sidebar.py                     # Sidebar configuration UI
+│   └── results.py                     # Results display (timetables, queues, metrics)
 ├── tests/
 │   ├── test_models.py
 │   ├── test_utils.py
