@@ -27,9 +27,6 @@ Thumbs.db
 htmlcov/
 .tox/
 
-# Streamlit
-.streamlit/
-
 # Jupyter
 .ipynb_checkpoints/
 
