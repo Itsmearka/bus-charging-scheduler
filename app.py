@@ -258,21 +258,32 @@ def main():
 
         # For dynamic scenarios, include base scenario and bus generation parameters in cache key
 
-        # These are stored in session state by the sidebar
+        # Use widget keys directly to ensure cache key reflects current widget values
 
         selected_scenario_file = st.session_state.get('selected_scenario_file', 'scenario_1_even_spacing.json')
 
-        num_forward = st.session_state.get('num_forward', 10)
+        num_forward = st.session_state.get('num_forward_input', 10)
 
-        num_reverse = st.session_state.get('num_reverse', 10)
+        num_reverse = st.session_state.get('num_reverse_input', 10)
 
-        start_time_forward = st.session_state.get('start_time_forward', '19:00')
+        start_time_forward = st.session_state.get('start_time_forward_input')
 
-        start_time_reverse = st.session_state.get('start_time_reverse', '19:00')
+        start_time_reverse = st.session_state.get('start_time_reverse_input')
 
-        interval_minutes = st.session_state.get('interval_minutes', 15)
+        interval_minutes = st.session_state.get('interval_minutes_input', 15)
 
-        cache_key = f"dynamic_{selected_scenario_file}_{num_forward}_{num_reverse}_{start_time_forward}_{start_time_reverse}_{interval_minutes}_{weights['individual']}_{weights['operator']}_{weights['overall']}_{enable_optimizations}_{unlimited_time}"
+        # Format time objects to strings for cache key
+        if start_time_forward:
+            start_time_forward_str = start_time_forward.strftime("%H:%M") if hasattr(start_time_forward, 'strftime') else str(start_time_forward)
+        else:
+            start_time_forward_str = "19:00"
+
+        if start_time_reverse:
+            start_time_reverse_str = start_time_reverse.strftime("%H:%M") if hasattr(start_time_reverse, 'strftime') else str(start_time_reverse)
+        else:
+            start_time_reverse_str = "19:00"
+
+        cache_key = f"dynamic_{selected_scenario_file}_{num_forward}_{num_reverse}_{start_time_forward_str}_{start_time_reverse_str}_{interval_minutes}_{weights['individual']}_{weights['operator']}_{weights['overall']}_{enable_optimizations}_{unlimited_time}"
 
     else:
 
@@ -468,7 +479,8 @@ def main():
 
                 if use_dynamic:
 
-                    result, scenario = run_scheduler_uncached(scenario, weights, enable_optimizations, unlimited_time)
+                    # Use run_scheduler with caching for dynamic mode too
+                    result, scenario = run_scheduler(scenario, weights, enable_optimizations, unlimited_time, cache_key=cache_key)
 
                 else:
 
