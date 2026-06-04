@@ -502,7 +502,7 @@ def main():
 
             st.error(f"Error running scheduler: {e}")
 
-            st.stop()
+            st.stop() 
 
     
 
