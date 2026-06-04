@@ -410,6 +410,7 @@ def main():
     else:
 
         st.info("Guaranteed feasible solution within time limit. Enable unlimited time for optimal solution on larger datasets.")
+        st.info("Solver tuned with empirically-validated solver-level optimizations (linearization, hints, presolve, conflict limit parameters).")
 
     
 
@@ -417,7 +418,7 @@ def main():
 
     if enable_optimizations:
 
-        st.info("Optimizations enabled")
+        st.info("Optimizations enabled: time-window decomposition, reachability filtering, symmetry breaking")
 
     
 
@@ -443,36 +444,6 @@ def main():
 
             
 
-            progress_bar = st.progress(0)
-
-            status_text = st.empty()
-
-            
-
-            # Show loading animation
-
-            show_loading_animation()
-
-            
-
-            status_text.text("Initializing solver...")
-
-            progress_bar.progress(10)
-
-            
-
-            status_text.text("Building constraints and variables...")
-
-            progress_bar.progress(30)
-
-            
-
-            status_text.text("Solving optimization problem using CP-SAT...")
-
-            progress_bar.progress(50)
-
-            
-
             # Run solver with spinner (caching handled inside run_scheduler)
 
             with st.spinner("Solving scheduling problem using CP-SAT solver..."):
@@ -489,20 +460,6 @@ def main():
                     selected_scenario_file = st.session_state.get('selected_scenario_file', 'scenario_1_even_spacing.json')
 
                     result, scenario = run_scheduler(selected_scenario_file, weights, enable_optimizations, unlimited_time, cache_key=cache_key)
-
-            
-
-            progress_bar.progress(100)
-
-            status_text.text("Solution found!")
-
-            
-
-            # Clear progress indicators
-
-            progress_bar.empty()
-
-            status_text.empty()
 
             
 
@@ -567,6 +524,65 @@ def main():
     # Only show tabs if solver is not running and we have results
 
     if not st.session_state.get('solver_running', False) and 'solver_result' in st.session_state:
+
+        # Display solver performance analytics
+        with st.expander("Solver Performance Analytics", expanded=False):
+            # Solver Status - Standard metric
+            col_status, col_quality = st.columns(2)
+            with col_status:
+                if result.solver_status == "OPTIMAL":
+                    st.markdown(f"**Solver Status:** :green[{result.solver_status}]")
+                else:
+                    st.markdown(f"**Solver Status:** :orange[{result.solver_status}]")
+            
+            with col_quality:
+                # Optimal Solution % - Derived from optimality gap (standard metric)
+                if result.optimality_gap_percent is not None:
+                    solution_quality = 100 - result.optimality_gap_percent
+                    st.metric("Optimal Solution %", f"{solution_quality:.1f}%")
+                else:
+                    st.metric("Optimal Solution %", "100%")
+            
+            st.divider()
+            
+            # Solver Efficiency Metrics
+            st.subheader("Solver Efficiency")
+            col_eff1, col_eff2, col_eff3 = st.columns(3)
+            
+            with col_eff1:
+                vars_per_sec = result.num_variables / max(result.solve_time_seconds, 0.01)
+                st.metric("Variables/Second", f"{vars_per_sec:.0f}", help="Variables processed per second")
+            
+            with col_eff2:
+                cons_per_sec = result.num_constraints / max(result.solve_time_seconds, 0.01)
+                st.metric("Constraints/Second", f"{cons_per_sec:.0f}", help="Constraints processed per second")
+            
+            with col_eff3:
+                branches_per_sec = result.branches_explored / max(result.solve_time_seconds, 0.01)
+                st.metric("Branches/Second", f"{branches_per_sec:.0f}", help="Search tree branches explored per second")
+            
+            st.divider()
+            
+            # Solver metrics
+            col1, col2, col3 = st.columns(3)
+            
+            with col1:
+                st.subheader("Timing")
+                st.metric("Solve Time", f"{result.solve_time_seconds:.2f} s")
+                if result.optimality_gap_percent is not None:
+                    st.metric("Optimality Gap", f"{result.optimality_gap_percent:.1f}%")
+                else:
+                    st.metric("Optimality Gap", "N/A")
+            
+            with col2:
+                st.subheader("Model Size")
+                st.metric("Variables", result.num_variables)
+                st.metric("Constraints", result.num_constraints)
+            
+            with col3:
+                st.subheader("Search Effort")
+                st.metric("Branches Explored", result.branches_explored)
+                st.metric("Conflicts Resolved", result.conflicts)
 
         # Render results tabs
 
