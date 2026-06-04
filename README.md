@@ -31,7 +31,6 @@ bus_charging_scheduler/
 ├── config.py                          # Global constants (SINGLE SOURCE OF TRUTH)
 ├── app.py                             # Streamlit UI application (orchestrates UI components)
 ├── ARCHITECTURE.md                    # Detailed architecture documentation
-├── OPTIMIZATION_SUMMARY.md            # Solver optimization documentation
 ├── README.md                          # Project documentation
 ├── data/
 │   └── scenarios/
