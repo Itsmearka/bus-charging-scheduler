@@ -410,7 +410,9 @@ def main():
     else:
 
         st.info("Guaranteed feasible solution within time limit. Enable unlimited time for optimal solution on larger datasets.")
-        st.info("Solver tuned with empirically-validated solver-level optimizations (linearization, hints, presolve, conflict limit parameters).")
+    
+    # Always show solver optimization info (applies regardless of time limit)
+    st.info("Solver tuned with empirically-validated solver-level optimizations (linearization, hints, presolve, conflict limit parameters).")
 
     
 
@@ -484,18 +486,13 @@ def main():
             
 
             # Display solve status
-
             if result.solver_status == "OPTIMAL":
-
-                st.success(f"Solver found OPTIMAL solution in {result.solve_time_seconds:.2f} seconds")
-
+                st.success("Solver found OPTIMAL solution. Check Solver Performance Analytics below for detailed metrics")
             elif result.solver_status == "FEASIBLE":
-
-                st.warning(f"Solver found FEASIBLE solution in {result.solve_time_seconds:.2f} seconds (time limit reached)")
-
+                st.warning("Solver found FEASIBLE solution (time limit reached). Check Solver Performance Analytics below for detailed metrics")
             else:
-
-                st.error(f"Solver status: {result.solver_status}")
+                st.error(f"Solver status: {result.solver_status}. Check Solver Performance Analytics below for detailed metrics")
+            
 
         
 
@@ -527,21 +524,40 @@ def main():
 
         # Display solver performance analytics
         with st.expander("Solver Performance Analytics", expanded=False):
-            # Solver Status - Standard metric
-            col_status, col_quality = st.columns(2)
-            with col_status:
-                if result.solver_status == "OPTIMAL":
-                    st.markdown(f"**Solver Status:** :green[{result.solver_status}]")
-                else:
-                    st.markdown(f"**Solver Status:** :orange[{result.solver_status}]")
+            # Summary badges - Color-coded caption text
+            col_badge1, col_badge2, col_badge3 = st.columns(3)
             
-            with col_quality:
-                # Optimal Solution % - Derived from optimality gap (standard metric)
+            with col_badge1:
+                if result.solver_status == "OPTIMAL":
+                    st.success(":green[OPTIMAL SOLVE]")
+                else:
+                    st.warning(":orange[FEASIBLE SOLUTION]")
+            
+            with col_badge2:
+                if result.solve_time_seconds < 5:
+                    st.success(f":green[Lightning Fast ({result.solve_time_seconds:.1f}s)]")
+                elif result.solve_time_seconds < 20:
+                    st.success(f":green[Fast ({result.solve_time_seconds:.1f}s)]")
+                elif result.solve_time_seconds < 45:
+                    st.success(f":green[Quick ({result.solve_time_seconds:.1f}s)]")
+                elif result.solve_time_seconds < 180:
+                    st.info(f":blue[Moderate ({result.solve_time_seconds:.1f}s)]")
+                else:
+                    st.error(f":red[Slow ({result.solve_time_seconds:.1f}s)]")
+            
+            with col_badge3:
                 if result.optimality_gap_percent is not None:
                     solution_quality = 100 - result.optimality_gap_percent
-                    st.metric("Optimal Solution %", f"{solution_quality:.1f}%")
+                    if solution_quality == 100.0:
+                        st.success(":green[100% Optimal]")
+                    elif solution_quality >= 99:
+                        st.success(f":green[{solution_quality:.1f}% Near optimal]")
+                    elif solution_quality >= 95:
+                        st.info(f":blue[{solution_quality:.1f}% Almost optimal]")
+                    else:
+                        st.warning(f":orange[{solution_quality:.1f}% Feasible (non-optimal)]")
                 else:
-                    st.metric("Optimal Solution %", "100%")
+                    st.success(":green[100% Optimal]")
             
             st.divider()
             
