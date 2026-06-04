@@ -71,13 +71,13 @@ class BusChargingScheduler:
         
         # 2. Symmetry breaking - eliminate duplicate solutions (Phase 2)
         add_symmetry_breaking_constraint(
-            self.model, self.variables, buses, stations, self.enable_optimizations
+            self.model, self.variables, buses, stations, self.config.get('enable_optimizations', False)
         )
         
         # 3. Charger capacity - prevents overlapping charges
         add_charger_capacity_constraint(
             self.model, self.variables, buses, stations,
-            self.config['chargers_per_station'], self.enable_optimizations
+            self.config['chargers_per_station'], self.config.get('enable_optimizations', False)
         )
         
         # 4. Route order - no backtracking
@@ -183,8 +183,9 @@ class BusChargingScheduler:
         
         # Add greedy heuristic hint to speed up first solve
         # This provides a feasible starting point for the solver
-        # Always enabled for performance optimization
-        self._add_greedy_hint()
+        # Conditionally enabled based on config - empirical testing shows hints slow down this problem
+        if self.config.get('enable_hints', True):
+            self._add_greedy_hint()
         
         # Set solver parameters
         if self.unlimited_time:
@@ -194,11 +195,18 @@ class BusChargingScheduler:
         else:
             self.solver.parameters.max_time_in_seconds = self.config['solver_time_limit_seconds']
         
-        # Worker configuration: consistently use 2 workers to match production environment
-        # Streamlit Cloud has 2 cores maximum, so we use 2 workers everywhere
-        # This ensures consistent performance characteristics between local and production
-        self.solver.parameters.num_search_workers = 2
+        # Worker configuration: use constant from config for consistent performance
+        # Set to 2 for both local and cloud environments
+        # self.solver.parameters.num_search_workers = config.NUM_SEARCH_WORKERS
         
+        # Additional solver parameters for better performance
+        self.solver.parameters.linearization_level = self.config.get('linearization_level', 0)
+        # Set max_number_of_conflicts based on config
+        self.solver.parameters.max_number_of_conflicts = self.config.get('max_number_of_conflicts', 100000)
+        # Enable presolve for better performance
+        if self.config.get('cp_model_presolve', False):
+            self.solver.parameters.cp_model_presolve = True
+        # self.solver.parameters.interleave_search = True  # Better diversification with multiple workers
         self.solver.parameters.log_search_progress = False
         
         # Solve
@@ -206,9 +214,30 @@ class BusChargingScheduler:
         
         solve_time = time.time() - start_time
         
+        # Extract solver statistics
+        num_vars = len(self.model.Proto().variables)
+        num_constraints = len(self.model.Proto().constraints)
+        branches = self.solver.NumBranches()
+        conflicts = self.solver.NumConflicts()
+        objective_value = self.solver.ObjectiveValue()
+        objective_bound = self.solver.BestObjectiveBound()
+        
+        # Convert to int to avoid Pydantic validation errors
+        if objective_value is not None:
+            objective_value = int(objective_value)
+        if objective_bound is not None:
+            objective_bound = int(objective_bound)
+        
+        # Compute optimality gap
+        if objective_value is not None and objective_bound is not None:
+            optimality_gap = ((objective_value - objective_bound) / max(1, objective_value)) * 100
+        else:
+            optimality_gap = None
+        
         # Check solver status
         if status == cp_model.OPTIMAL:
             solver_status = "OPTIMAL"
+            optimality_gap = 0.0  # Optimal solutions have 0% gap
         elif status == cp_model.FEASIBLE:
             solver_status = "FEASIBLE"
         else:
@@ -233,7 +262,14 @@ class BusChargingScheduler:
             solver_status=solver_status,
             total_wait_time_minutes=total_wait,
             max_wait_time_minutes=max_wait,
-            average_wait_time_minutes=avg_wait
+            average_wait_time_minutes=avg_wait,
+            num_variables=num_vars,
+            num_constraints=num_constraints,
+            branches_explored=branches,
+            conflicts=conflicts,
+            objective_value=objective_value,
+            objective_bound=objective_bound,
+            optimality_gap_percent=optimality_gap
         )
         
         return result

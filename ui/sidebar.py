@@ -98,7 +98,7 @@ def render_sidebar():
     enable_optimizations = st.sidebar.checkbox(
         "Enable Optimizations",
         key='enable_optimizations_checkbox',
-        help="Enable time-window decomposition and station filtering for larger scenarios"
+        help="Enable time-window decomposition, reachability filtering, and symmetry breaking (may slow down solver for small scenarios)"
     )
     # Update session state for cache key generation
     st.session_state['enable_optimizations'] = enable_optimizations

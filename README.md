@@ -18,7 +18,9 @@ This project implements a constraint programming solution for optimizing electri
 - **Interactive UI**: Streamlit interface with weight tuning and real-time visualization
 - **Dynamic Bus Configuration**: Generate buses dynamically via UI with configurable counts, start times, and intervals
 - **5 Test Scenarios**: Pre-configured scenarios from even spacing to worst-case convergence
-- **Phase 2 Optimizations**: Toggle-able optimizations for larger scenarios (30+ buses)
+- **Solver Performance Analytics**: Comprehensive solver metrics displayed in main UI area (accordion format)
+- **Solver Optimizations**: Configured solver parameters (linearization, conflicts, presolve) for 26-72% improvement
+- **Phase 2 Constraint Optimizations**: Optional toggle for very large scenarios (40+ buses)
 - **Unlimited Time Limit**: Optional removal of time limit for guaranteed optimal solutions
 - **100% Test Coverage**: Comprehensive test suite with both automated and manual validation
 
@@ -28,26 +30,30 @@ This project implements a constraint programming solution for optimizing electri
 bus_charging_scheduler/
 ├── config.py                          # Global constants (SINGLE SOURCE OF TRUTH)
 ├── app.py                             # Streamlit UI application (orchestrates UI components)
+├── ARCHITECTURE.md                    # Detailed architecture documentation
+├── README.md                          # Project documentation
 ├── data/
-│   ├── scenarios/
-│   │   ├── scenario_1_even_spacing.json
-│   │   ├── scenario_2_bunched_start.json
-│   │   ├── scenario_3_asymmetric_load.json
-│   │   ├── scenario_4_operator_heavy.json
-│   │   └── scenario_5_worst_case.json
+│   └── scenarios/
+│       ├── scenario_1_even_spacing.json
+│       ├── scenario_2_bunched_start.json
+│       ├── scenario_3_asymmetric_load.json
+│       ├── scenario_4_operator_heavy.json
+│       └── scenario_5_worst_case.json
 ├── src/
+│   ├── __init__.py
 │   ├── models.py                      # Pydantic data models
 │   ├── scheduler.py                   # CP-SAT scheduling engine (main orchestrator)
 │   ├── scheduler_variables.py        # Variable management for CP-SAT
 │   ├── scheduler_solution.py          # Solution extraction from solver
+│   ├── objectives.py                  # Objective functions
+│   ├── loader.py                      # Scenario loading
+│   ├── utils.py                       # Helper functions
 │   ├── constraints/                   # Constraint definitions (modular package)
 │   │   ├── __init__.py
 │   │   ├── range.py                   # Battery range constraints
 │   │   ├── capacity.py                # Charger capacity constraints
 │   │   ├── route.py                   # Route order constraints
 │   │   └── timing.py                  # Timing constraints (duration, travel, arrival)
-│   ├── objectives.py                  # Objective functions
-│   ├── loader.py                      # Scenario loading
 │   └── utils/                         # Helper functions (modular package)
 │       ├── __init__.py
 │       ├── route.py                   # Route and distance calculations
@@ -59,13 +65,19 @@ bus_charging_scheduler/
 │   ├── carousels.py                   # Fact and architectural decision carousels
 │   ├── sidebar.py                     # Sidebar configuration UI
 │   └── results.py                     # Results display (timetables, queues, metrics)
+├── .streamlit/
+│   └── config.toml                    # Streamlit configuration
 ├── tests/
 │   ├── test_models.py
 │   ├── test_utils.py
 │   ├── test_loader.py
 │   └── test_scenarios.py
 ├── scripts/
-│   └── validate_scenarios.py          # Manual validation script
+│   ├── validate_scenarios.py          # Manual validation script
+│   ├── analyze_all_scenarios.py        # Analyze all scenarios
+│   ├── test_charging_duration.py       # Test charging duration
+│   ├── test_dynamic_generation.py       # Test dynamic bus generation
+│   └── test_weight_tunability.py        # Test weight tunability
 ├── requirements.txt
 └── README.md
 ```
@@ -129,11 +141,12 @@ The Streamlit UI provides an interactive interface for testing scenarios and vis
    - Buses are named `bus_forward_N` and `bus_reverse_N` with round-robin operator assignment
    - Configuration is in-memory only (not saved to files)
 
-4. **Enable Phase 2 Optimizations**
-   - Check "Enable Phase 2 Optimizations" for improved performance
-   - Uses time-window decomposition, station filtering, symmetry breaking, and pre-computed bounds
-   - Applies to all scenarios, but most beneficial for 30+ buses
-   - Improves solve time by ~70% for complex scenarios
+4. **Enable Phase 2 Constraint Optimizations**
+   - Check "Enable Optimizations" for Phase 2 constraint optimizations
+   - Uses symmetry breaking, bus filtering, time window pruning, and pre-computed bounds
+   - **DISABLED by default** - empirical testing shows 43-62% degradation for scenarios 1,3,4
+   - Only enable for very large scenarios (40+ buses) where filtering might help
+   - Solver-level optimizations are always enabled and provide 26-72% improvement for scenarios 1,3,4
 
 5. **Remove Time Limit**
    - Check "Remove Time Limit (Run Until Optimal)" to disable the 60-second time limit
@@ -147,6 +160,12 @@ The Streamlit UI provides an interactive interface for testing scenarios and vis
    - **Solve Time**: Time taken by the CP-SAT solver
    - **Wait Times**: Lower is better - represents actual waiting time for chargers
    - **Station Utilization**: Shows how many buses charged at each station
+   - **Solver Performance Analytics**: Comprehensive solver metrics with:
+     - Solver status (OPTIMAL/FEASIBLE) with color coding
+     - Optimal Solution % (derived from optimality gap)
+     - Solver efficiency metrics (variables/second, constraints/second, branches/second)
+     - Model size (variables, constraints)
+     - Search effort (branches explored, conflicts resolved)
 
 ### Running Tests
 
@@ -179,9 +198,16 @@ All configurable values are in `config.py` (single source of truth):
 ### Optimization Settings
 
 - `DEFAULT_WEIGHTS`: Default weights for individual, operator, overall objectives
-- `ENABLE_OPTIMIZATIONS`: Toggle Phase 2 optimizations (time-window decomposition)
+- `ENABLE_CONSTRAINT_OPTIMIZATIONS`: Toggle Phase 2 constraint optimizations (symmetry breaking, bus filtering, time window pruning) - DISABLED by default (slows down solver)
 - `TIME_WINDOW_THRESHOLD_MINUTES`: Threshold for time-window decomposition (default: 30)
 - `SOLVER_TIME_LIMIT_SECONDS`: Maximum solve time (default: 60 seconds)
+
+### Solver-Level Optimizations (Always Enabled)
+
+- `LINEARIZATION_LEVEL`: Set to 0 (no LP relaxation) - 63-72% improvement for scenarios 1,3,4
+- `ENABLE_HINTS`: Set to False (disables greedy hints) - 26-32% improvement for scenarios 1,3,4
+- `CP_MODEL_PRESOLVE`: Set to True (enables presolve) - 35-60% improvement for scenarios 1,3,4
+- `MAX_NUMBER_OF_CONFLICTS`: Set to 500000 (increased from 100000) - 26-46% improvement for scenarios 1,3,4
 
 ### Dynamic Bus Generation Defaults
 
@@ -207,17 +233,25 @@ All configurable values are in `config.py` (single source of truth):
 - The solver may segregate buses by direction to avoid contention when possible
 
 **Solver Configuration**
-- Uses 8 parallel search workers (OR-Tools recommendation)
+- Uses CP-SAT default parallel search (adaptive based on problem size)
 - Default time limit: 60 seconds
 - Unlimited time: 31,536,000 seconds (1 year) for guaranteed optimality
-- Solve times vary between runs due to parallel worker non-determinism (normal behavior)
-- Phase 2 optimizations apply to all scenarios, most beneficial for 30+ buses
+- Solve times may vary between runs due to solver non-determinism (normal behavior)
+- Solver-level optimizations are always enabled (linearization, hints, presolve, conflicts)
+- Phase 2 constraint optimizations are disabled by default (toggle available for testing)
 
-**Phase 2 Optimization Components**
-- Time-window filtering: Skips ordering constraints for buses arriving >30 min apart (applies to all)
-- Reachability filtering: Removes buses that can't reach stations (only for >20 buses at station)
-- Symmetry breaking: Enforces lexicographic ordering for identical departure times (applies to all)
-- Pre-computed bounds: Tightens variable domains for faster solving (applies to all)
+**Solver-Level Optimizations (Always Enabled)**
+- Linearization level 0: Disables LP relaxation for 63-72% improvement on scenarios 1,3,4
+- Hints disabled: Disables greedy hints for 26-32% improvement on scenarios 1,3,4
+- CP model presolve: Enables presolve for 35-60% improvement on scenarios 1,3,4
+- Max conflicts 500000: Increased from 100000 for 26-46% improvement on scenarios 1,3,4
+
+**Phase 2 Constraint Optimizations (Disabled by Default)**
+- Symmetry breaking: Enforces lexicographic ordering for identical departure times
+- Bus filtering: Removes buses that can't reach stations (only for >20 buses at station)
+- Time window pruning: Skips ordering constraints for buses arriving >30 min apart
+- Pre-computed bounds: Tightens variable domains for faster solving
+- **Note**: These optimizations slow down the solver by 43-62% for scenarios 1,3,4
 
 ### How to Change a Weight
 
@@ -259,16 +293,17 @@ BATTERY_RANGE_KM = 300  # Changed from 240
 CHARGING_TIME_MINUTES = 20  # Changed from 25
 ```
 
-### How to Enable Phase 2 Optimizations
+### How to Enable Phase 2 Constraint Optimizations
 
 **Option 1: Edit config.py**
 ```python
-ENABLE_OPTIMIZATIONS = True
+ENABLE_CONSTRAINT_OPTIMIZATIONS = True
 ```
 
 **Option 2: Use UI checkbox**
-- Check "Enable Phase 2 Optimizations" in the sidebar
-- Useful for testing with 40+ buses
+- Check "Enable Optimizations" in the sidebar
+- **Note**: This slows down the solver by 43-62% for scenarios 1,3,4
+- Only recommended for very large scenarios (40+ buses)
 
 ## Adding a New Scenario
 
@@ -322,6 +357,15 @@ KPN dominates Bengaluru→Kochi fleet (8 of 10). Tests operator weight impact.
 ### Scenario 5 - Worst Case Convergence
 All 20 buses within 72-minute window. Maximum contention at inner stations.
 
+### Solver Performance Analytics
+The main UI area includes a "Solver Performance Analytics" accordion (collapsed by default) showing:
+- Solver status (OPTIMAL/FEASIBLE) with color coding
+- Optimal Solution % (derived from optimality gap)
+- Solver efficiency metrics (variables/second, constraints/second, branches/second)
+- Timing metrics (solve time, optimality gap)
+- Model size (variables, constraints)
+- Search effort (branches explored, conflicts resolved)
+
 ## Testing
 
 ### Automated Tests
@@ -335,9 +379,6 @@ pytest --cov=src --cov-report=html
 
 # Run specific test file
 pytest tests/test_models.py
-
-# Run integration tests
-pytest tests/test_scenarios.py -m integration
 ```
 
 ### Manual Validation
@@ -360,9 +401,10 @@ If the solver returns "INFEASIBLE":
 ### Slow Solve Times
 
 For scenarios with 40+ buses:
-- Enable Phase 2 optimizations (`ENABLE_OPTIMIZATIONS = True`)
-- Increase `TIME_WINDOW_THRESHOLD_MINUTES` in config.py
 - Consider reducing problem size (fewer buses or stations)
+- Increase `SOLVER_TIME_LIMIT_SECONDS` in config.py (e.g., to 300 seconds)
+- Phase 2 constraint optimizations are NOT recommended (they slow down the solver)
+- Solver-level optimizations are already enabled by default
 
 ### Import Errors
 
@@ -744,28 +786,30 @@ Based on CP-SAT performance characteristics:
 
 | Buses | Stations | Chargers | Expected Solve Time | Strategy |
 |-------|----------|----------|---------------------|----------|
-| 20 | 4 | 1 | < 1s | Phase 1 (vanilla) |
-| 40 | 4 | 1 | 5-30s | Phase 2 (optimizations) |
-| 100 | 4 | 1 | 1-5 min | Phase 2 + time limits |
-| 100 | 10 | 2 | 2-10 min | Phase 2 + heuristics |
-| 1000+ | 20+ | 5+ | 10-60 min | Phase 4 (rolling horizon) |
+| 20 | 4 | 1 | < 1s | Solver optimizations only |
+| 40 | 4 | 1 | 5-30s | Problem size reduction or longer time limits |
+| 100 | 4 | 1 | 1-5 min | Problem size reduction + longer time limits |
+| 100 | 10 | 2 | 2-10 min | Problem size reduction + longer time limits |
+| 1000+ | 20+ | 5+ | 10-60 min | Hierarchical solving or heuristics (not implemented) |
 
-#### Phase 1 (Implemented): Vanilla CP-SAT
+#### Phase 1 (Implemented): Vanilla CP-SAT with Solver Optimizations
 
 - **Target**: 20-40 buses
-- **Features**: Full CP-SAT model with all constraints
-- **Performance**: < 1 second for 20 buses
+- **Features**: Full CP-SAT model with all constraints, solver-level optimizations enabled
+- **Performance**: < 1 second for 20 buses, 26-72% improvement for scenarios 1,3,4
+- **Limitations**: Scenarios 2 and 5 (high contention) still hit 60s time limit
 - **Status**: Implemented and tested
 
-#### Phase 2 (Implemented): Time-Window Decomposition + Station Filtering
+#### Phase 2 (Implemented): Constraint Optimizations
 
 - **Target**: 40-100 buses
 - **Features**:
   - Skip ordering constraints for buses arriving >30 min apart
   - Only create variables for likely charging stations
-  - Solver time limit to prevent excessive computation
-- **Performance**: 5-30 seconds for 40 buses
-- **Status**: Implemented with toggle flag
+  - Symmetry breaking for identical departure times
+  - Pre-computed variable bounds
+- **Performance**: Slows down solver by 43-62% for scenarios 1,3,4 (disabled by default)
+- **Status**: Implemented with toggle flag (disabled by default)
 
 #### Phase 3 (Documented): Heuristic Warm Start + Hierarchical Solving
 
@@ -789,26 +833,25 @@ Based on CP-SAT performance characteristics:
 
 #### Optimization Strategies for Larger Instances
 
-**1. Time-Window Decomposition**
-- Skip ordering constraints for buses with non-overlapping arrival windows
-- Reduces quadratic ordering constraints by 60-80%
+**1. Solver-Level Optimizations (Always Enabled)**
+- Linearization level 0: Disables LP relaxation (63-72% improvement for scenarios 1,3,4)
+- Hints disabled: Disables greedy hints (26-32% improvement for scenarios 1,3,4)
+- CP model presolve: Enables presolve (35-60% improvement for scenarios 1,3,4)
+- Max conflicts 500000: Increased conflict limit (26-46% improvement for scenarios 1,3,4)
 
-**2. Station Filtering**
-- Only create variables for stations within battery range
-- Reduces variables by 30-50%
+**2. Constraint-Level Optimizations (Optional Toggle)**
+- Time-window decomposition: Skip ordering constraints for buses arriving >30 min apart
+- Station filtering: Only create variables for stations within battery range
+- Symmetry breaking: Enforce lexicographic ordering for identical departure times
+- Pre-computed bounds: Tighten variable domains
+- **Note**: These slow down solver by 43-62% for scenarios 1,3,4 (disabled by default)
 
-**3. Hierarchical Solving**
-- Phase 1: Decide which stations each bus uses
-- Phase 2: Decide exact timing
-- Reduces problem from one large problem to two smaller ones
+**3. Problem Size Reduction**
+- Reduce number of buses per scheduling window
+- Only effective approach for scenarios with high contention (20+ buses in tight windows)
 
-**4. Heuristic Warm Start**
-- Use greedy algorithm to find initial solution
-- Feed to CP-SAT as starting point
-- 5-10x faster convergence
-
-**5. Time Limits**
-- Set solver time limit (e.g., 60 seconds)
+**4. Time Limits**
+- Set solver time limit (e.g., 60 seconds for FEASIBLE, 300 seconds for better solutions)
 - Returns best solution found within limit
 - May not be optimal but guaranteed to be valid
 

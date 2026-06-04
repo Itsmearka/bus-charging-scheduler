@@ -75,7 +75,7 @@ def render_scenario_input_tab(scenario, weights):
     
     col1, col2 = st.columns(2)
     with col1:
-        st.write("**Route:** Bengaluru → A → B → C → D → Kochi")
+        st.write("**Route:** Bengaluru -> A -> B -> C -> D -> Kochi")
         st.write(f"**Total Distance:** {config['total_route_distance_km']} km")
         st.write(f"**Battery Range:** {config['battery_range_km']} km")
         st.write(f"**Charging Time:** {config['charging_time_minutes']} minutes")
@@ -98,7 +98,7 @@ def render_scenario_input_tab(scenario, weights):
     ]
     
     for from_loc, to_loc, distance in segments:
-        st.write(f"  - {from_loc} → {to_loc}: {distance} km")
+        st.write(f"  - {from_loc} -> {to_loc}: {distance} km")
 
 
 def render_bus_timetables_tab(result):

@@ -87,9 +87,13 @@ def get_scenario_config(scenario: Scenario) -> dict:
         'chargers_per_station': config.CHARGERS_PER_STATION,
         'total_route_distance_km': config.TOTAL_ROUTE_DISTANCE_KM,
         'station_locations_km': config.STATION_LOCATIONS_KM,
-        'enable_optimizations': config.ENABLE_OPTIMIZATIONS,
+        'enable_optimizations': config.ENABLE_CONSTRAINT_OPTIMIZATIONS,
         'time_window_threshold_minutes': config.TIME_WINDOW_THRESHOLD_MINUTES,
         'solver_time_limit_seconds': config.SOLVER_TIME_LIMIT_SECONDS,
+        'linearization_level': config.LINEARIZATION_LEVEL,
+        'enable_hints': config.ENABLE_HINTS,
+        'cp_model_presolve': config.CP_MODEL_PRESOLVE,
+        'max_number_of_conflicts': config.MAX_NUMBER_OF_CONFLICTS,
     }
     
     return effective_config

@@ -84,7 +84,7 @@ def build_objective(
     # This makes the solver prefer fewer charges when wait times are equal
     model.AddMultiplicationEquality(charging_penalty, [total_charges, 25])
     
-    # Combine weighted objectives using integer scaling
+    # Combine weighted objectives using direct linear expression (no expensive AddMultiplicationEquality)
     # Scale weights to integers (multiply by 100)
     w_ind = int(weights['individual'] * 100)
     w_op = int(weights['operator'] * 100)
@@ -92,19 +92,12 @@ def build_objective(
     
     weighted_objective = model.NewIntVar(0, 10000000, "weighted_objective")
     
-    # Create scaled penalty terms
-    scaled_ind = model.NewIntVar(0, 10000000, "scaled_individual")
-    scaled_op = model.NewIntVar(0, 10000000, "scaled_operator")
-    scaled_ov = model.NewIntVar(0, 10000000, "scaled_overall")
-    scaled_charging = model.NewIntVar(0, 10000000, "scaled_charging")
-    
-    model.AddMultiplicationEquality(scaled_ind, [individual_penalty, w_ind])
-    model.AddMultiplicationEquality(scaled_op, [operator_penalty, w_op])
-    model.AddMultiplicationEquality(scaled_ov, [overall_penalty, w_ov])
-    # Weight charging penalty same as overall (multiply by 100 for scaling)
-    model.AddMultiplicationEquality(scaled_charging, [charging_penalty, 100])
-    
-    model.Add(weighted_objective == scaled_ind + scaled_op + scaled_ov + scaled_charging)
+    # Direct linear combination: w_ind * individual + w_op * operator + w_ov * overall + 100 * charging
+    model.Add(weighted_objective == 
+             w_ind * individual_penalty + 
+             w_op * operator_penalty + 
+             w_ov * overall_penalty + 
+             100 * charging_penalty)
     
     return weighted_objective
 

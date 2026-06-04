@@ -171,3 +171,12 @@ class SchedulerResult(BaseModel):
     total_wait_time_minutes: int = Field(..., ge=0, description="Total wait across all buses")
     max_wait_time_minutes: int = Field(..., ge=0, description="Maximum wait for any single bus")
     average_wait_time_minutes: float = Field(..., ge=0, description="Average wait per bus")
+    
+    # Solver statistics
+    num_variables: int = Field(default=0, ge=0, description="Number of decision variables in model")
+    num_constraints: int = Field(default=0, ge=0, description="Number of constraints in model")
+    branches_explored: int = Field(default=0, ge=0, description="Number of branches explored by solver")
+    conflicts: int = Field(default=0, ge=0, description="Number of conflicts resolved by solver")
+    objective_value: Optional[int] = Field(default=None, description="Objective value of solution")
+    objective_bound: Optional[int] = Field(default=None, description="Best known objective bound")
+    optimality_gap_percent: Optional[float] = Field(default=None, ge=0, description="Optimality gap percentage")

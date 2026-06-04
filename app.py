@@ -410,6 +410,9 @@ def main():
     else:
 
         st.info("Guaranteed feasible solution within time limit. Enable unlimited time for optimal solution on larger datasets.")
+    
+    # Always show solver optimization info (applies regardless of time limit)
+    st.info("Solver tuned with empirically-validated solver-level optimizations (linearization, hints, presolve, conflict limit parameters).")
 
     
 
@@ -417,7 +420,7 @@ def main():
 
     if enable_optimizations:
 
-        st.info("Optimizations enabled")
+        st.info("Optimizations enabled: time-window decomposition, reachability filtering, symmetry breaking")
 
     
 
@@ -443,36 +446,6 @@ def main():
 
             
 
-            progress_bar = st.progress(0)
-
-            status_text = st.empty()
-
-            
-
-            # Show loading animation
-
-            show_loading_animation()
-
-            
-
-            status_text.text("Initializing solver...")
-
-            progress_bar.progress(10)
-
-            
-
-            status_text.text("Building constraints and variables...")
-
-            progress_bar.progress(30)
-
-            
-
-            status_text.text("Solving optimization problem using CP-SAT...")
-
-            progress_bar.progress(50)
-
-            
-
             # Run solver with spinner (caching handled inside run_scheduler)
 
             with st.spinner("Solving scheduling problem using CP-SAT solver..."):
@@ -489,20 +462,6 @@ def main():
                     selected_scenario_file = st.session_state.get('selected_scenario_file', 'scenario_1_even_spacing.json')
 
                     result, scenario = run_scheduler(selected_scenario_file, weights, enable_optimizations, unlimited_time, cache_key=cache_key)
-
-            
-
-            progress_bar.progress(100)
-
-            status_text.text("Solution found!")
-
-            
-
-            # Clear progress indicators
-
-            progress_bar.empty()
-
-            status_text.empty()
 
             
 
@@ -527,18 +486,13 @@ def main():
             
 
             # Display solve status
-
             if result.solver_status == "OPTIMAL":
-
-                st.success(f"Solver found OPTIMAL solution in {result.solve_time_seconds:.2f} seconds")
-
+                st.success("Solver found OPTIMAL solution. Check Solver Performance Analytics below for detailed metrics")
             elif result.solver_status == "FEASIBLE":
-
-                st.warning(f"Solver found FEASIBLE solution in {result.solve_time_seconds:.2f} seconds (time limit reached)")
-
+                st.warning("Solver found FEASIBLE solution (time limit reached). Check Solver Performance Analytics below for detailed metrics")
             else:
-
-                st.error(f"Solver status: {result.solver_status}")
+                st.error(f"Solver status: {result.solver_status}. Check Solver Performance Analytics below for detailed metrics")
+            
 
         
 
@@ -548,7 +502,7 @@ def main():
 
             st.error(f"Error running scheduler: {e}")
 
-            st.stop()
+            st.stop() 
 
     
 
@@ -567,6 +521,84 @@ def main():
     # Only show tabs if solver is not running and we have results
 
     if not st.session_state.get('solver_running', False) and 'solver_result' in st.session_state:
+
+        # Display solver performance analytics
+        with st.expander("Solver Performance Analytics", expanded=False):
+            # Summary badges - Color-coded caption text
+            col_badge1, col_badge2, col_badge3 = st.columns(3)
+            
+            with col_badge1:
+                if result.solver_status == "OPTIMAL":
+                    st.success(":green[OPTIMAL SOLVE]")
+                else:
+                    st.warning(":orange[FEASIBLE SOLUTION]")
+            
+            with col_badge2:
+                if result.solve_time_seconds < 5:
+                    st.success(f":green[Lightning Fast ({result.solve_time_seconds:.1f}s)]")
+                elif result.solve_time_seconds < 20:
+                    st.success(f":green[Fast ({result.solve_time_seconds:.1f}s)]")
+                elif result.solve_time_seconds < 45:
+                    st.success(f":green[Quick ({result.solve_time_seconds:.1f}s)]")
+                elif result.solve_time_seconds < 180:
+                    st.info(f":blue[Moderate ({result.solve_time_seconds:.1f}s)]")
+                else:
+                    st.error(f":red[Slow ({result.solve_time_seconds:.1f}s)]")
+            
+            with col_badge3:
+                if result.optimality_gap_percent is not None:
+                    solution_quality = 100 - result.optimality_gap_percent
+                    if solution_quality == 100.0:
+                        st.success(":green[100% Optimal]")
+                    elif solution_quality >= 99:
+                        st.success(f":green[{solution_quality:.1f}% Near optimal]")
+                    elif solution_quality >= 95:
+                        st.info(f":blue[{solution_quality:.1f}% Almost optimal]")
+                    else:
+                        st.warning(f":orange[{solution_quality:.1f}% Feasible (non-optimal)]")
+                else:
+                    st.success(":green[100% Optimal]")
+            
+            st.divider()
+            
+            # Solver Efficiency Metrics
+            st.subheader("Solver Efficiency")
+            col_eff1, col_eff2, col_eff3 = st.columns(3)
+            
+            with col_eff1:
+                vars_per_sec = result.num_variables / max(result.solve_time_seconds, 0.01)
+                st.metric("Variables/Second", f"{vars_per_sec:.0f}", help="Variables processed per second")
+            
+            with col_eff2:
+                cons_per_sec = result.num_constraints / max(result.solve_time_seconds, 0.01)
+                st.metric("Constraints/Second", f"{cons_per_sec:.0f}", help="Constraints processed per second")
+            
+            with col_eff3:
+                branches_per_sec = result.branches_explored / max(result.solve_time_seconds, 0.01)
+                st.metric("Branches/Second", f"{branches_per_sec:.0f}", help="Search tree branches explored per second")
+            
+            st.divider()
+            
+            # Solver metrics
+            col1, col2, col3 = st.columns(3)
+            
+            with col1:
+                st.subheader("Timing")
+                st.metric("Solve Time", f"{result.solve_time_seconds:.2f} s")
+                if result.optimality_gap_percent is not None:
+                    st.metric("Optimality Gap", f"{result.optimality_gap_percent:.1f}%")
+                else:
+                    st.metric("Optimality Gap", "N/A")
+            
+            with col2:
+                st.subheader("Model Size")
+                st.metric("Variables", result.num_variables)
+                st.metric("Constraints", result.num_constraints)
+            
+            with col3:
+                st.subheader("Search Effort")
+                st.metric("Branches Explored", result.branches_explored)
+                st.metric("Conflicts Resolved", result.conflicts)
 
         # Render results tabs
 
