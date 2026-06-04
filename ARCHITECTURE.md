@@ -342,14 +342,14 @@ solver = cp_model.CpSolver()
 solver.parameters.num_search_workers = config.NUM_SEARCH_WORKERS
 ```
 
-### Phase 2 Optimizations
+### Phase 2 Constraint Optimizations (Disabled by Default)
 
-Advanced optimizations for large scenarios (20+ buses per station):
+Advanced constraint-level optimizations for very large scenarios (40+ buses):
 
 ```python
 # config.py
-ENABLE_PHASE2_OPTIMIZATIONS = True  # Default: enabled for large scenarios
-TIME_WINDOW_THRESHOLD_MINUTES = 120  # Threshold for time-window filtering
+ENABLE_CONSTRAINT_OPTIMIZATIONS = False  # Default: disabled (slows down solver)
+TIME_WINDOW_THRESHOLD_MINUTES = 30  # Threshold for time-window filtering
 ```
 
 **Components:**
@@ -368,19 +368,34 @@ TIME_WINDOW_THRESHOLD_MINUTES = 120  # Threshold for time-window filtering
    - Reduces search space
 
 **When to Enable:**
-- **Small scenarios (<20 buses)**: Not needed, overhead > benefit
-- **Large scenarios (>20 buses)**: Significant speedup
-- **Very large scenarios (50+ buses)**: Essential for feasibility
+- **Small scenarios (<20 buses)**: NOT recommended - slows down solver by 43-62%
+- **Medium scenarios (20-40 buses)**: NOT recommended - slows down solver by 43-62%
+- **Large scenarios (>40 buses)**: MAY help with filtering, but testing shows mixed results
+- **Very large scenarios (50+ buses)**: Only enable if problem size reduction is not feasible
+
+**Note**: Empirical testing shows these optimizations SLOW DOWN the solver by 43-62% for scenarios 1,3,4. They are disabled by default because CP-SAT's built-in constraint propagation is more efficient for this problem structure.
 
 **How to Control:**
 
 ```python
 # Method 1: Via config.py
-ENABLE_PHASE2_OPTIMIZATIONS = True
-TIME_WINDOW_THRESHOLD_MINUTES = 120
+ENABLE_CONSTRAINT_OPTIMIZATIONS = True  # Only for very large scenarios
+TIME_WINDOW_THRESHOLD_MINUTES = 30
 
 # Method 2: Via Streamlit UI
 enable_optimizations = st.sidebar.checkbox("Enable Optimizations", value=False)
+```
+
+### Solver-Level Optimizations (Always Enabled)
+
+These solver parameters are always enabled and provide 26-72% improvement for scenarios 1,3,4:
+
+```python
+# config.py - Solver-level optimizations
+LINEARIZATION_LEVEL = 0  # No LP relaxation - 63-72% improvement for scenarios 1,3,4
+ENABLE_HINTS = False  # Disables greedy hints - 26-32% improvement for scenarios 1,3,4
+CP_MODEL_PRESOLVE = True  # Enables presolve - 35-60% improvement for scenarios 1,3,4
+MAX_NUMBER_OF_CONFLICTS = 500000  # Increased from 100000 - 26-46% improvement for scenarios 1,3,4
 ```
 
 ### Solver Parameters Summary
@@ -388,37 +403,39 @@ enable_optimizations = st.sidebar.checkbox("Enable Optimizations", value=False)
 ```python
 # config.py - All solver-related parameters
 SOLVER_TIME_LIMIT_SECONDS = 60
-NUM_SEARCH_WORKERS = 8
-ENABLE_PHASE2_OPTIMIZATIONS = True
-TIME_WINDOW_THRESHOLD_MINUTES = 120
+NUM_SEARCH_WORKERS = 2  # Set to 2 for both local and cloud environments
+ENABLE_CONSTRAINT_OPTIMIZATIONS = False  # Phase 2 constraint optimizations (disabled by default)
+TIME_WINDOW_THRESHOLD_MINUTES = 30
 ```
 
 **Recommended Settings:**
 
-| Scenario Size | Time Limit | Workers | Phase 2 |
-|--------------|------------|---------|---------|
-| Small (<20) | 30s | 8 | False |
-| Medium (20-50) | 60s | 8 | True |
-| Large (50-100) | 120s | 8 | True |
-| Very Large (>100) | Unlimited | 16 | True |
+| Scenario Size | Time Limit | Workers | Phase 2 Constraint Optimizations |
+|--------------|------------|---------|----------------------------------|
+| Small (<20) | 30s | 2 | False (slows down solver) |
+| Medium (20-40) | 60s | 2 | False (slows down solver) |
+| Large (40-100) | 120-300s | 2 | False (slows down solver, use longer time limit instead) |
+| Very Large (>100) | 300s+ | 2 | False (use problem size reduction instead) |
 
 ### Performance Tuning Tips
 
 1. **For faster solve times**:
-   - Reduce time limit to 30-60s
-   - Enable Phase 2 optimizations
-   - Use 8 workers (not 1)
+   - Solver-level optimizations are already enabled (linearization_level=0, ENABLE_HINTS=False, CP_MODEL_PRESOLVE=True, MAX_NUMBER_OF_CONFLICTS=500000)
+   - Reduce time limit to 30-60s for FEASIBLE solutions
+   - DO NOT enable Phase 2 constraint optimizations (they slow down the solver by 43-62%)
+   - Use 2 workers (consistent across local and cloud)
 
 2. **For better solution quality**:
-   - Increase time limit to 120s or unlimited
-   - Use 1 worker for determinism
-   - Disable Phase 2 if small scenario
+   - Increase time limit to 120-300s for better FEASIBLE solutions
+   - Use unlimited time limit for OPTIMAL solutions (may take 10-60 minutes for large scenarios)
+   - Keep solver-level optimizations enabled
+   - DO NOT enable Phase 2 constraint optimizations
 
-3. **For very large scenarios**:
-   - Enable Phase 2 optimizations
-   - Use unlimited time limit
-   - Increase workers to 16 if available
-   - Consider splitting into smaller sub-problems
+3. **For very large scenarios (40+ buses)**:
+   - Reduce problem size (fewer buses per scheduling window) - this is the ONLY effective approach
+   - Increase time limit to 300s+ if problem size cannot be reduced
+   - DO NOT enable Phase 2 constraint optimizations (they slow down the solver)
+   - Consider heuristic approaches or problem decomposition for 100+ buses (not implemented)
 
 ## How to Add a New Rule
 
@@ -430,7 +447,7 @@ The constraint system is modular, making it easy to add new rules. Here's how to
 
 ### Step 1: Define the Constraint Function
 
-Add a new function in `src/constraints.py`:
+Add a new function in `src/constraints/` (e.g., `src/constraints/range.py` or a new module):
 
 ```python
 def add_max_wait_time_constraint(
@@ -482,7 +499,12 @@ def build_model(self, scenario: Scenario, enable_optimizations: bool = False):
     
     # ... create variables ...
     
-    # Add all constraints
+    # Add all constraints using modular constraint package
+    from src.constraints.range import add_range_constraint
+    from src.constraints.capacity import add_charger_capacity_constraint
+    from src.constraints.route import add_route_order_constraint
+    from src.constraints.timing import add_travel_time_constraint
+    
     add_range_constraint(model, variables, scenario.buses, stations, 
                         battery_range_km)
     add_charger_capacity_constraint(model, variables, scenario.buses, stations, 
@@ -502,7 +524,7 @@ def build_model(self, scenario: Scenario, enable_optimizations: bool = False):
 
 ### Step 4: Add Tests
 
-Add tests in `tests/test_constraints.py`:
+Add tests in `tests/test_constraints.py` or appropriate test file:
 
 ```python
 def test_max_wait_time_constraint():
@@ -574,7 +596,53 @@ def build_objective(model, variables, buses, stations, weights):
     return weighted_objective
 ```
 
-## Assumptions
+### Performance Optimizations
+
+The scheduler includes several optimizations to improve solve time and solution quality:
+
+#### Modular Variable Management
+- **scheduler_variables.py**: Centralized variable creation via `VariableManager` class
+- Separates variable creation logic from constraint building
+- Enables easier debugging and maintenance of variable definitions
+
+#### Modular Solution Extraction
+- **scheduler_solution.py**: Solution parsing via `SolutionExtractor` class
+- Extracts charging plans from CP-SAT solver response
+- Converts solver variables into human-readable charging events
+
+#### Constraint Modularity
+- **constraints/ package**: Separate modules for each constraint type
+  - `range.py`: Battery range constraints
+  - `capacity.py`: Charger capacity constraints with symmetry breaking
+  - `route.py`: Route order constraints
+  - `timing.py`: Timing constraints (duration, travel, arrival)
+- Enables easy addition of new constraints
+- Improves code organization and maintainability
+
+#### Utility Functions
+- **utils/ package**: Helper functions for common operations
+  - `route.py`: Route and distance calculations
+  - `time.py`: Time conversion and travel time calculations
+  - `bus_generation.py`: Dynamic bus generation for testing
+- Reusable across different parts of the system
+
+### Solver Statistics
+
+The UI displays detailed solver metrics in the "Solver Performance Analytics" section:
+
+- **Performance Score**: Overall solver performance score (0-100) with letter grade (A+ to D)
+- **Solver Status**: OPTIMAL (found best solution) or FEASIBLE (found valid solution within time limit)
+- **Solve Time**: Time taken by the CP-SAT solver in seconds
+- **Optimality Gap**: Percentage difference between best solution found and theoretical optimum (0% for OPTIMAL)
+- **Variables Count**: Number of decision variables in the CP-SAT model
+- **Constraints Count**: Number of constraints in the CP-SAT model
+- **Branches Explored**: Number of search tree branches explored during solving
+- **Conflicts Resolved**: Number of constraint conflicts resolved by the solver
+- **Solver Efficiency Metrics**: Variables/second, constraints/second, branches/second
+- **Performance Badges**: Optimal Solution, Lightning Fast, Conflict-Free, etc.
+- **Solver Insights**: Recommendations based on solver performance
+
+These metrics help diagnose solver performance and understand solution quality.
 
 ### Physical Assumptions
 
@@ -595,7 +663,7 @@ def build_objective(model, variables, buses, stations, weights):
 ### Solver Assumptions
 
 1. **Time Limit**: The solver has a 60-second time limit for production use
-2. **Parallel Search**: Uses 8 parallel search workers for faster solving
+2. **Parallel Search**: Uses CP-SAT default parallel search (adaptive based on problem size)
 3. **Optimality Goal**: Aims for optimal solution, accepts feasible if time limit reached
 4. **Deterministic with Fixed Seed**: With fixed random seed, results are reproducible (not currently used)
 5. **Integer Precision**: Time is represented in minutes (integer arithmetic)
@@ -610,11 +678,13 @@ def build_objective(model, variables, buses, stations, weights):
 
 ### Performance Assumptions
 
-1. **Scalability**: The solver can handle up to 100 buses with current configuration
+1. **Scalability**: The solver can handle up to 40 buses with current configuration (scenarios 2 and 5 with 20 buses still hit 60s time limit)
 2. **Memory Usage**: Memory usage scales linearly with number of buses and stations
 3. **Solve Time**: Solve time increases exponentially with problem size
-4. **Phase 2 Optimizations**: Time-window decomposition helps with >20 buses per station
-5. **Caching**: Streamlit caching reduces re-computation for unchanged inputs
+4. **Solver-Level Optimizations**: Provide 26-72% improvement for scenarios 1,3,4 but no improvement for scenarios 2,5
+5. **Phase 2 Constraint Optimizations**: Disabled by default (slows down solver by 43-62% for scenarios 1,3,4)
+6. **Problem Size Reduction**: Only effective approach for large scenarios with high contention (scenarios 2,5)
+7. **Caching**: Streamlit caching reduces re-computation for unchanged inputs
 
 ### Future Considerations
 
