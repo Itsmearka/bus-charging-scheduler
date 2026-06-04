@@ -18,7 +18,7 @@ This project implements a constraint programming solution for optimizing electri
 - **Interactive UI**: Streamlit interface with weight tuning and real-time visualization
 - **Dynamic Bus Configuration**: Generate buses dynamically via UI with configurable counts, start times, and intervals
 - **5 Test Scenarios**: Pre-configured scenarios from even spacing to worst-case convergence
-- **Solver Performance Analytics**: Comprehensive solver metrics with performance scores, grades, and insights
+- **Solver Performance Analytics**: Comprehensive solver metrics displayed in main UI area (accordion format)
 - **Solver Optimizations**: Configured solver parameters (linearization, conflicts, presolve) for 26-72% improvement
 - **Phase 2 Constraint Optimizations**: Optional toggle for very large scenarios (40+ buses)
 - **Unlimited Time Limit**: Optional removal of time limit for guaranteed optimal solutions
@@ -30,26 +30,31 @@ This project implements a constraint programming solution for optimizing electri
 bus_charging_scheduler/
 ├── config.py                          # Global constants (SINGLE SOURCE OF TRUTH)
 ├── app.py                             # Streamlit UI application (orchestrates UI components)
+├── ARCHITECTURE.md                    # Detailed architecture documentation
+├── OPTIMIZATION_SUMMARY.md            # Solver optimization documentation
+├── README.md                          # Project documentation
 ├── data/
-│   ├── scenarios/
-│   │   ├── scenario_1_even_spacing.json
-│   │   ├── scenario_2_bunched_start.json
-│   │   ├── scenario_3_asymmetric_load.json
-│   │   ├── scenario_4_operator_heavy.json
-│   │   └── scenario_5_worst_case.json
+│   └── scenarios/
+│       ├── scenario_1_even_spacing.json
+│       ├── scenario_2_bunched_start.json
+│       ├── scenario_3_asymmetric_load.json
+│       ├── scenario_4_operator_heavy.json
+│       └── scenario_5_worst_case.json
 ├── src/
+│   ├── __init__.py
 │   ├── models.py                      # Pydantic data models
 │   ├── scheduler.py                   # CP-SAT scheduling engine (main orchestrator)
 │   ├── scheduler_variables.py        # Variable management for CP-SAT
 │   ├── scheduler_solution.py          # Solution extraction from solver
+│   ├── objectives.py                  # Objective functions
+│   ├── loader.py                      # Scenario loading
+│   ├── utils.py                       # Helper functions
 │   ├── constraints/                   # Constraint definitions (modular package)
 │   │   ├── __init__.py
 │   │   ├── range.py                   # Battery range constraints
 │   │   ├── capacity.py                # Charger capacity constraints
 │   │   ├── route.py                   # Route order constraints
 │   │   └── timing.py                  # Timing constraints (duration, travel, arrival)
-│   ├── objectives.py                  # Objective functions
-│   ├── loader.py                      # Scenario loading
 │   └── utils/                         # Helper functions (modular package)
 │       ├── __init__.py
 │       ├── route.py                   # Route and distance calculations
@@ -157,12 +162,11 @@ The Streamlit UI provides an interactive interface for testing scenarios and vis
    - **Wait Times**: Lower is better - represents actual waiting time for chargers
    - **Station Utilization**: Shows how many buses charged at each station
    - **Solver Performance Analytics**: Comprehensive solver metrics with:
-     - Performance score (0-100) and letter grade (A+ to D)
+     - Solver status (OPTIMAL/FEASIBLE) with color coding
+     - Optimal Solution % (derived from optimality gap)
      - Solver efficiency metrics (variables/second, constraints/second, branches/second)
      - Model size (variables, constraints)
      - Search effort (branches explored, conflicts resolved)
-     - Performance badges (Optimal Solution, Lightning Fast, Conflict-Free, etc.)
-     - Solver insights and recommendations
 
 ### Running Tests
 
@@ -354,17 +358,14 @@ KPN dominates Bengaluru→Kochi fleet (8 of 10). Tests operator weight impact.
 ### Scenario 5 - Worst Case Convergence
 All 20 buses within 72-minute window. Maximum contention at inner stations.
 
-### Solver Statistics Panel
-The Metrics tab includes a comprehensive "Solver Performance Analytics" section showing:
-- Performance score (0-100) and letter grade (A+ to D)
+### Solver Performance Analytics
+The main UI area includes a "Solver Performance Analytics" accordion (collapsed by default) showing:
 - Solver status (OPTIMAL/FEASIBLE) with color coding
-- Solve time and optimality gap
+- Optimal Solution % (derived from optimality gap)
 - Solver efficiency metrics (variables/second, constraints/second, branches/second)
-- Model size (variables and constraints count)
-- Search effort (branches explored and conflicts resolved)
-- Performance badges (Optimal Solution, Lightning Fast, Conflict-Free, etc.)
-- Solver insights and recommendations
-- Solution quality progress bar
+- Timing metrics (solve time, optimality gap)
+- Model size (variables, constraints)
+- Search effort (branches explored, conflicts resolved)
 
 ## Testing
 

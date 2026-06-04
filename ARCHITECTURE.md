@@ -628,10 +628,10 @@ The scheduler includes several optimizations to improve solve time and solution 
 
 ### Solver Statistics
 
-The UI displays detailed solver metrics in the "Solver Performance Analytics" section:
+The UI displays detailed solver metrics in the "Solver Performance Analytics" section (main UI area, accordion format):
 
-- **Performance Score**: Overall solver performance score (0-100) with letter grade (A+ to D)
 - **Solver Status**: OPTIMAL (found best solution) or FEASIBLE (found valid solution within time limit)
+- **Optimal Solution %**: Derived from optimality gap (100% for OPTIMAL)
 - **Solve Time**: Time taken by the CP-SAT solver in seconds
 - **Optimality Gap**: Percentage difference between best solution found and theoretical optimum (0% for OPTIMAL)
 - **Variables Count**: Number of decision variables in the CP-SAT model
@@ -639,8 +639,6 @@ The UI displays detailed solver metrics in the "Solver Performance Analytics" se
 - **Branches Explored**: Number of search tree branches explored during solving
 - **Conflicts Resolved**: Number of constraint conflicts resolved by the solver
 - **Solver Efficiency Metrics**: Variables/second, constraints/second, branches/second
-- **Performance Badges**: Optimal Solution, Lightning Fast, Conflict-Free, etc.
-- **Solver Insights**: Recommendations based on solver performance
 
 These metrics help diagnose solver performance and understand solution quality.
 
